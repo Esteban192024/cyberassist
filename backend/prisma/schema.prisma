@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  password         String
+  nombre           String
+  role             String            @default("student")
+  xp               Int               @default(0)
+  level            Int               @default(1)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activityLogs     ActivityLog[]
+  certificates     Certificate[]
+  diagnostics      Diagnostic[]
+  simulations      Simulation[]
+  userAchievements UserAchievement[]
+  userProgress     UserProgress?
+
+  @@index([email])
+}
+
+model Diagnostic {
+  id                          String   @id @default(cuid())
+  userId                      String
+  score                       Int
+  total                       Int
+  masteredTotal               Int
+  masteredGoal                Int
+  riskLevel                   String
+  strengths                   String[]
+  weaknesses                  String[]
+  personalizedRecommendations Json?
+  generalRecommendations      String[]
+  createdAt                   DateTime @default(now())
+  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Simulation {
+  id            String   @id @default(cuid())
+  userId        String
+  score         Int
+  total         Int
+  masteredTotal Int
+  masteredGoal  Int
+  riskLevel     String
+  strengths     String[]
+  weaknesses    String[]
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Achievement {
+  id               String            @id @default(cuid())
+  code             String            @unique
+  name             String
+  description      String
+  icon             String
+  xpReward         Int
+  category         String
+  createdAt        DateTime          @default(now())
+  userAchievements UserAchievement[]
+
+  @@index([code])
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+}
+
+model Certificate {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String
+  securityLevel String
+  levelName     String
+  xp            Int
+  issuedAt      DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  details   String?
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model UserProgress {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  diagnosticMastered Int      @default(0)
+  diagnosticTotal    Int      @default(15)
+  simulationMastered Int      @default(0)
+  simulationTotal    Int      @default(15)
+  programComplete    Boolean  @default(false)
+  topicLearning      Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
