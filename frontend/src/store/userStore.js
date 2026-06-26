@@ -103,7 +103,7 @@ export const getUserData = async () => {
 
   console.log('[DEBUG] getUserData - diagnosticsCount from getLearningProgress:', {
     diagnosticsCount,
-    source: apiProgressCache ? 'apiProgressCache via getLearningProgress' : 'localStorage via getLearningProgress'
+    source: getCachedProgress() ? 'apiProgressCache via getLearningProgress' : 'localStorage via getLearningProgress'
   })
 
   console.log('[CERTIFICATE] Evaluation', {
