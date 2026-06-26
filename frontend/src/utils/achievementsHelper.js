@@ -1,6 +1,7 @@
 // Sistema de logros y achievements - Migrado a Neon/Prisma
 import { registerActivity } from './activityHelper'
-import { addXP } from './levelHelper'
+import { addXP, getUserLevelData } from './levelHelper'
+import { LEVELS } from './levelHelper'
 import {
   getMasteredQuestions,
   getMasteredScenarios,
@@ -80,21 +81,44 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
     { code: 'program_complete', condition: learning.programComplete },
   ]
 
+  // Obtener logros ya notificados en esta sesión para evitar duplicados
+  const sessionNotified = JSON.parse(sessionStorage.getItem('sessionNotifiedAchievements') || '[]')
+  
+  // Guardar nivel antes de desbloquear logros
+  const oldLevel = userProgress.level
+
   for (const { code, condition } of achievementsToCheck) {
-    if (condition && !unlockedCodes.includes(code)) {
+    if (condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)) {
       if (silent) {
         try {
           await achievementAPI.unlock({ code })
           newlyUnlocked.push(code)
           // Actualizar cache
           userAchievementsCache.push({ achievement: { code } })
+          // Marcar como notificado en esta sesión
+          sessionNotified.push(code)
+          sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
         } catch (error) {
           console.error(`Error unlocking achievement ${code}:`, error)
         }
       } else {
         const achievement = await unlockAchievement(code)
-        if (achievement) newlyUnlocked.push(achievement)
+        if (achievement) {
+          newlyUnlocked.push(achievement)
+          // Marcar como notificado en esta sesión
+          sessionNotified.push(code)
+          sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
+        }
       }
+    }
+  }
+
+  // Consolidar notificación de nivel al final si cambió
+  const newLevel = getUserLevelData()?.level || oldLevel
+  if (newLevel > oldLevel && !silent) {
+    // Mostrar solo un toast del nivel final alcanzado
+    if (typeof window !== 'undefined' && window.showToast) {
+      window.showToast('level', `🎊 ¡Nivel ${newLevel}: ${LEVELS[newLevel]?.name || 'Desconocido'}!`)
     }
   }
 
@@ -136,7 +160,8 @@ export const unlockAchievement = async (achievementCode) => {
       window.showToast('achievement', `🎉 ${achievement.name} desbloqueado!`)
     }
 
-    addXP('achievement')
+    // No mostrar toast de nivel individualmente, se consolidará al final
+    addXP('achievement', null, false)
 
     return achievement
   } catch (error) {

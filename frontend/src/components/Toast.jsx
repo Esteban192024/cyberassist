@@ -6,10 +6,23 @@ import { generateUniqueId } from '../utils/quizHelper'
 const MAX_VISIBLE_TOASTS = 3
 
 const Toast = ({ type, message, onClose, duration = 3000, index }) => {
+  const timerRef = useRef(null)
+
   useEffect(() => {
-    const timer = setTimeout(onClose, duration)
-    return () => clearTimeout(timer)
+    timerRef.current = setTimeout(onClose, duration)
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
   }, [duration, onClose])
+
+  const handleClose = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
+    onClose()
+  }
 
   const getToastConfig = () => {
     switch (type) {
@@ -62,8 +75,8 @@ const Toast = ({ type, message, onClose, duration = 3000, index }) => {
         <p className="font-medium text-sm">{message}</p>
       </div>
       <button
-        onClick={onClose}
-        className="flex-shrink-0 hover:opacity-70 transition-opacity"
+        onClick={handleClose}
+        className="flex-shrink-0 hover:opacity-70 transition-opacity cursor-pointer"
       >
         <X className="w-4 h-4" />
       </button>

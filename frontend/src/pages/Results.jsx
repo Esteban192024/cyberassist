@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Shield,
@@ -27,6 +27,7 @@ import TopicBadges from '../components/TopicBadges'
 
 function Results() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [filter, setFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
@@ -42,6 +43,9 @@ function Results() {
 
   useEffect(() => {
     const loadData = async () => {
+      // Invalidar cache para asegurar datos frescos
+      invalidateUserCache()
+      
       setIsLoading(true)
       const start = performance.now()
       const data = await loadResultsPageData()
@@ -56,7 +60,7 @@ function Results() {
       setIsLoading(false)
     }
     loadData()
-  }, [])
+  }, [location.pathname])
 
   const results = resultsData?.results || []
   const simulationsResults = resultsData?.simulationsResults || []

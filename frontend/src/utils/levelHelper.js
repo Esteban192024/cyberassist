@@ -10,6 +10,8 @@ const LEVELS = {
   5: { name: 'Experto en Ciberseguridad', xpRequired: 2000, icon: '🏆' }
 }
 
+export { LEVELS }
+
 const XP_VALUES = {
   diagnostic: 100,
   simulation: 150,
@@ -127,7 +129,7 @@ export const getCurrentLevelXP = (currentLevel) => {
   return LEVELS[currentLevel].xpRequired
 }
 
-export const addXP = async (type, activityId = null) => {
+export const addXP = async (type, activityId = null, showLevelToast = true) => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   if (!currentUser) return null
 
@@ -183,8 +185,8 @@ export const addXP = async (type, activityId = null) => {
   if (newLevel > oldLevel) {
     registerActivity('level_up', '¡Subiste de nivel!', `Nivel ${newLevel}: ${LEVELS[newLevel].name}`)
     
-    // Mostrar toast de nivel aumentado solo si no se ha notificado este nivel
-    if (!isLevelUpNotified(newLevel)) {
+    // Mostrar toast de nivel aumentado solo si se permite y no se ha notificado este nivel
+    if (showLevelToast && !isLevelUpNotified(newLevel)) {
       markLevelUpNotified(newLevel)
       if (typeof window !== 'undefined' && window.showToast) {
         window.showToast('level', `🎊 ¡Nivel ${newLevel}: ${LEVELS[newLevel].name}!`)
