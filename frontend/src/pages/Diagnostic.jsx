@@ -12,6 +12,7 @@ import {
   markQuestionMastered,
   recordTopicAttempt,
   getDiagnosticProgress,
+  getMasteredQuestions,
   TOTAL_DIAGNOSTIC_ITEMS,
   getCumulativeTopicAnalysis,
   sanitizeTopicList,
