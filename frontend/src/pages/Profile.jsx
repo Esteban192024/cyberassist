@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   User, 
@@ -26,6 +26,7 @@ import ProfileSkeleton from '../components/skeletons/ProfileSkeleton'
 
 function Profile() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
@@ -49,7 +50,7 @@ function Profile() {
       setIsLoading(false)
     }
     loadStats()
-  }, [])
+  }, [location.pathname])
 
   const diagnosticsCount = stats?.diagnosticsCount ?? 0
   const diagnosticsTotal = stats?.diagnosticsTotal ?? 15

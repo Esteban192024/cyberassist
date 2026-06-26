@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Star, TrendingUp, X } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { generateUniqueId } from '../utils/quizHelper'
 
 const MAX_VISIBLE_TOASTS = 3
@@ -76,6 +76,15 @@ const ToastContainer = () => {
   const [queue, setQueue] = useState([])
 
   const addToast = (type, message, duration = 3000) => {
+    // Verificar si ya existe un toast idéntico en cola o visible
+    const isDuplicate = [...toasts, ...queue].some(
+      toast => toast.type === type && toast.message === message
+    )
+    
+    if (isDuplicate) {
+      return // No agregar toast duplicado
+    }
+    
     const id = generateUniqueId()
     const newToast = { id, type, message, duration }
     
@@ -106,10 +115,16 @@ const ToastContainer = () => {
     })
   }
 
+  const addToastRef = useRef(addToast)
+
+  useEffect(() => {
+    addToastRef.current = addToast
+  }, [addToast])
+
   // Exponer función globalmente
   useEffect(() => {
-    window.showToast = addToast
-  }, [toasts, queue])
+    window.showToast = (...args) => addToastRef.current(...args)
+  }, [])
 
   return (
     <div className="fixed top-24 right-6 z-50 pointer-events-none">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Shield,
   BarChart3,
@@ -25,6 +25,7 @@ import { sanitizeHistoricalData } from '../utils/progressHelper'
 
 function DashboardStudent() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [dashboardStats, setDashboardStats] = useState(null)
   const [chartData, setChartData] = useState([])
   const [activities, setActivities] = useState([])
@@ -49,7 +50,7 @@ function DashboardStudent() {
       setIsLoading(false)
     }
     loadData()
-  }, [])
+  }, [location.pathname])
 
   const results = dashboardStats?.results || []
 

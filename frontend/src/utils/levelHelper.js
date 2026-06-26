@@ -43,6 +43,33 @@ export const markActivityAsRewarded = (activityId) => {
   }
 }
 
+export const getLevelUpNotifications = () => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+  if (!currentUser) return []
+  
+  try {
+    return JSON.parse(localStorage.getItem(`levelUpNotifications_${currentUser.id}`)) || []
+  } catch {
+    return []
+  }
+}
+
+export const markLevelUpNotified = (level) => {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+  if (!currentUser) return
+  
+  const notifications = getLevelUpNotifications()
+  if (!notifications.includes(level)) {
+    notifications.push(level)
+    localStorage.setItem(`levelUpNotifications_${currentUser.id}`, JSON.stringify(notifications))
+  }
+}
+
+export const isLevelUpNotified = (level) => {
+  const notifications = getLevelUpNotifications()
+  return notifications.includes(level)
+}
+
 export const isCertificateUnlocked = async () => {
   try {
     const certificates = await certificateAPI.getUserCertificates()
@@ -156,9 +183,12 @@ export const addXP = async (type, activityId = null) => {
   if (newLevel > oldLevel) {
     registerActivity('level_up', '¡Subiste de nivel!', `Nivel ${newLevel}: ${LEVELS[newLevel].name}`)
     
-    // Mostrar toast de nivel aumentado
-    if (typeof window !== 'undefined' && window.showToast) {
-      window.showToast('level', `🎊 ¡Nivel ${newLevel}: ${LEVELS[newLevel].name}!`)
+    // Mostrar toast de nivel aumentado solo si no se ha notificado este nivel
+    if (!isLevelUpNotified(newLevel)) {
+      markLevelUpNotified(newLevel)
+      if (typeof window !== 'undefined' && window.showToast) {
+        window.showToast('level', `🎊 ¡Nivel ${newLevel}: ${LEVELS[newLevel].name}!`)
+      }
     }
   }
 
