@@ -39,7 +39,9 @@ function Profile() {
   const currentUser = user
 
   useEffect(() => {
+    console.log('[NAVIGATION] Enter Profile', { pathname: location.pathname, timestamp: new Date().toISOString(), userId: currentUser?.id })
     const loadStats = async () => {
+      console.log('[SYNC] Loading data for Profile')
       setIsLoading(true)
       const start = performance.now()
       const data = await getDashboardStats()
@@ -47,13 +49,22 @@ function Profile() {
         console.info(`[Perf] Profile.jsx: ${Math.round(performance.now() - start)}ms`)
       }
       if (data) {
-        console.log('[DEBUG] Profile - diagnosticsCount:', data.diagnosticsCount)
-        console.log('[DEBUG] Profile - simulationsCount:', data.simulationsCount)
+        console.log('[SYNC] Final values rendered for Profile:', {
+          diagnosticsCount: data.diagnosticsCount,
+          simulationsCount: data.simulationsCount,
+          achievementsCount: data.badgesEarned,
+          certificatesCount: data.certificateUnlocked ? 1 : 0,
+          xp: data.xp,
+          level: data.level
+        })
         setStats(data)
       }
       setIsLoading(false)
     }
     loadStats()
+    return () => {
+      console.log('[NAVIGATION] Exit Profile', { pathname: location.pathname, timestamp: new Date().toISOString() })
+    }
   }, [location.pathname])
 
   const diagnosticsCount = stats?.diagnosticsCount ?? 0

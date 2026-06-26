@@ -35,7 +35,9 @@ function DashboardStudent() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
   useEffect(() => {
+    console.log('[NAVIGATION] Enter Dashboard', { pathname: location.pathname, timestamp: new Date().toISOString(), userId: currentUser?.id })
     const loadData = async () => {
+      console.log('[SYNC] Loading data for Dashboard')
       setIsLoading(true)
       const start = performance.now()
       const data = await loadDashboardPageData()
@@ -43,8 +45,14 @@ function DashboardStudent() {
         console.info(`[Perf] DashboardStudent.jsx: ${Math.round(performance.now() - start)}ms`)
       }
       if (data) {
-        console.log('[DEBUG] Dashboard - diagnosticsCount:', data.dashboardStats.diagnosticsCount)
-        console.log('[DEBUG] Dashboard - simulationsCount:', data.dashboardStats.simulationsCount)
+        console.log('[SYNC] Final values rendered for Dashboard:', {
+          diagnosticsCount: data.dashboardStats.diagnosticsCount,
+          simulationsCount: data.dashboardStats.simulationsCount,
+          achievementsCount: data.dashboardStats.badgesEarned,
+          certificatesCount: data.dashboardStats.certificateUnlocked ? 1 : 0,
+          xp: data.dashboardStats.xp,
+          level: data.dashboardStats.level
+        })
         setDashboardStats(data.dashboardStats)
         setChartData(data.chartData)
         setActivities(data.activities)
@@ -52,6 +60,9 @@ function DashboardStudent() {
       setIsLoading(false)
     }
     loadData()
+    return () => {
+      console.log('[NAVIGATION] Exit Dashboard', { pathname: location.pathname, timestamp: new Date().toISOString() })
+    }
   }, [location.pathname])
 
   const results = dashboardStats?.results || []

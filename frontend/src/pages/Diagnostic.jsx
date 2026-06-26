@@ -29,6 +29,13 @@ function Diagnostic() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   const userId = currentUser?.id
 
+  useEffect(() => {
+    console.log('[NAVIGATION] Enter Diagnostic', { pathname: window.location.pathname, timestamp: new Date().toISOString(), userId })
+    return () => {
+      console.log('[NAVIGATION] Exit Diagnostic', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
+    }
+  }, [])
+
   const initialProgress = getDiagnosticProgress(userId)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -64,11 +71,19 @@ function Diagnostic() {
     (option) => {
       if (isLocked || !currentQuestion || !userId) return
 
+      const masteredBefore = getMasteredQuestions(userId).length
       setSelectedAnswer(option)
       setIsLocked(true)
 
       const isCorrect = option === currentQuestion.correctAnswer
       recordTopicAttempt(userId, currentQuestion.topic, isCorrect)
+
+      console.log('[DIAGNOSTIC] Question answered', {
+        questionId: currentQuestion.id,
+        correct: isCorrect,
+        masteredBefore,
+        masteredAfter: isCorrect ? masteredBefore + 1 : masteredBefore
+      })
 
       if (isCorrect) {
         const isNewMaster = markQuestionMastered(userId, currentQuestion.id)
@@ -162,7 +177,14 @@ function Diagnostic() {
         })
 
         // Actualizar el cache local
-        await fetchUserProgress()
+        console.log('[DIAGNOSTIC] Session completed', {
+          score: correctCount,
+          total: totalSession,
+          percentage: Math.round((correctCount / totalSession) * 100),
+          fetchUserProgressExecuted: true
+        })
+        const progressResponse = await fetchUserProgress()
+        console.log('[DIAGNOSTIC] fetchUserProgress response:', progressResponse)
       } catch (error) {
         console.error('Error saving diagnostic to database:', error)
         throw error

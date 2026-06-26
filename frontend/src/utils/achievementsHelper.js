@@ -35,6 +35,7 @@ function hasPerfectSimulationSession(simulationsResults) {
 }
 
 async function evaluateAchievements(context = {}, { silent = false } = {}) {
+  console.log('[ACHIEVEMENTS] Evaluation started', { context, silent })
   console.log('[DEBUG] checkAchievements() called with context:', context)
   const newlyUnlocked = []
   
@@ -42,12 +43,14 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
   try {
     const response = await achievementAPI.getUserAchievements()
     userAchievementsCache = response.data || []
+    console.log('[DEBUG] evaluateAchievements - userAchievementsCache:', userAchievementsCache.map(ua => ua.achievement.code))
   } catch (error) {
     console.error('Error fetching user achievements:', error)
     return newlyUnlocked
   }
 
   const unlockedCodes = userAchievementsCache.map(ua => ua.achievement.code)
+  console.log('[DEBUG] evaluateAchievements - unlockedCodes before loop:', unlockedCodes)
   const userId = JSON.parse(localStorage.getItem('currentUser'))?.id
   if (!userId) return newlyUnlocked
 
@@ -89,6 +92,14 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
   const oldLevel = userProgress.level
 
   for (const { code, condition } of achievementsToCheck) {
+    console.log('[ACHIEVEMENTS] Evaluating achievement:', {
+      code,
+      conditionMet: condition,
+      alreadyUnlocked: unlockedCodes.includes(code),
+      sessionNotified: sessionNotified.includes(code),
+      willAttemptUnlock: condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)
+    })
+    console.log('[DEBUG] evaluateAchievements - checking achievement:', code, 'condition:', condition, 'already unlocked:', unlockedCodes.includes(code), 'session notified:', sessionNotified.includes(code))
     if (condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)) {
       if (silent) {
         try {
@@ -103,7 +114,9 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
           console.error(`Error unlocking achievement ${code}:`, error)
         }
       } else {
+        console.log('[DEBUG] evaluateAchievements - calling unlockAchievement for:', code)
         const achievement = await unlockAchievement(code)
+        console.log('[DEBUG] evaluateAchievements - unlockAchievement returned:', achievement)
         if (achievement) {
           newlyUnlocked.push(achievement)
           // Marcar como notificado en esta sesión
@@ -130,9 +143,12 @@ export const syncAchievements = () => evaluateAchievements({ type: 'sync' }, { s
 
 export const getUnlockedAchievements = async () => {
   try {
+    console.log('[DEBUG] getUnlockedAchievements - calling achievementAPI.getUserAchievements')
     const response = await achievementAPI.getUserAchievements()
     userAchievementsCache = response.data || []
-    return userAchievementsCache.map(ua => ua.achievement.code)
+    const codes = userAchievementsCache.map(ua => ua.achievement.code)
+    console.log('[DEBUG] getUnlockedAchievements - returned codes:', codes)
+    return codes
   } catch (error) {
     console.error('Error fetching unlocked achievements:', error)
     return []
@@ -145,9 +161,18 @@ export const isAchievementUnlocked = (achievementCode) => {
 }
 
 export const unlockAchievement = async (achievementCode) => {
+  const alreadyUnlocked = isAchievementUnlocked(achievementCode)
+  console.log('[ACHIEVEMENTS] Unlock request', {
+    code: achievementCode,
+    alreadyUnlocked: alreadyUnlocked ? 'YES' : 'NO',
+    apiCall: 'achievementAPI.unlock',
+    apiResponse: 'pending'
+  })
   console.log('[DEBUG] unlockAchievement() called with code:', achievementCode)
   try {
+    console.log('[DEBUG] unlockAchievement - calling achievementAPI.unlock for:', achievementCode)
     const response = await achievementAPI.unlock({ code: achievementCode })
+    console.log('[DEBUG] unlockAchievement - achievementAPI.unlock response:', response.status, response.data)
     const achievement = response.data.userAchievement.achievement
     
     // Actualizar cache
@@ -158,6 +183,7 @@ export const unlockAchievement = async (achievementCode) => {
 
     registerActivity('achievement', `Logro desbloqueado: ${achievement.name}`, achievement.description)
 
+    console.log('[DEBUG] unlockAchievement - showing toast for:', achievement.name)
     if (typeof window !== 'undefined' && window.showToast) {
       window.showToast('achievement', `🎉 ${achievement.name} desbloqueado!`)
     }
@@ -167,9 +193,10 @@ export const unlockAchievement = async (achievementCode) => {
 
     return achievement
   } catch (error) {
-    console.error('Error unlocking achievement:', error)
+    console.error('[DEBUG] unlockAchievement - error:', error.response?.status, error.message)
     if (error.response?.status === 400) {
       // Ya desbloqueado, no es error
+      console.log('[DEBUG] unlockAchievement - achievement already unlocked (400)')
       return null
     }
     return null

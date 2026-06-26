@@ -9,15 +9,21 @@ const Toast = ({ type, message, onClose, duration = 3000, index }) => {
   const timerRef = useRef(null)
 
   useEffect(() => {
-    timerRef.current = setTimeout(onClose, duration)
+    console.log('[TOAST] Auto close started', { type, message, duration })
+    timerRef.current = setTimeout(() => {
+      console.log('[TOAST] Auto close fired', { type, message })
+      onClose()
+    }, duration)
     return () => {
       if (timerRef.current) {
+        console.log('[TOAST] Auto close cleaned up', { type, message })
         clearTimeout(timerRef.current)
       }
     }
   }, [duration, onClose])
 
   const handleClose = () => {
+    console.log('[TOAST] Removed (manual)', { type, message })
     if (timerRef.current) {
       clearTimeout(timerRef.current)
     }
@@ -89,19 +95,20 @@ const ToastContainer = () => {
   const [queue, setQueue] = useState([])
 
   const addToast = (type, message, duration = 3000) => {
-    console.log('[DEBUG] window.showToast() called:', { type, message })
+    console.log('[TOAST] Requested', { id: 'pending', type, message })
     // Verificar si ya existe un toast idéntico en cola o visible
     const isDuplicate = [...toasts, ...queue].some(
       toast => toast.type === type && toast.message === message
     )
     
     if (isDuplicate) {
-      console.log('[DEBUG] Toast blocked as duplicate:', { type, message })
+      console.log('[TOAST] Duplicate blocked', { type, message })
       return // No agregar toast duplicado
     }
     
     const id = generateUniqueId()
     const newToast = { id, type, message, duration }
+    console.log('[TOAST] Added', { id, type, message, duration })
     
     setToasts(prev => {
       if (prev.length < MAX_VISIBLE_TOASTS) {
@@ -116,6 +123,7 @@ const ToastContainer = () => {
   }
 
   const removeToast = (id) => {
+    console.log('[TOAST] Removed', { id })
     setToasts(prev => {
       const filtered = prev.filter(toast => toast.id !== id)
       
@@ -139,6 +147,19 @@ const ToastContainer = () => {
   // Exponer función globalmente
   useEffect(() => {
     window.showToast = (...args) => addToastRef.current(...args)
+  }, [])
+
+  // Log estado del contenedor
+  useEffect(() => {
+    console.log('[DEBUG] ToastContainer state - toasts:', toasts.length, 'queue:', queue.length)
+  }, [toasts, queue])
+
+  // Log al montar
+  useEffect(() => {
+    console.log('[DEBUG] ToastContainer mounted')
+    return () => {
+      console.log('[DEBUG] ToastContainer unmounted')
+    }
   }, [])
 
   return (

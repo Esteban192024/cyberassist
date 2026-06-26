@@ -133,6 +133,17 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   if (!currentUser) return null
 
+  const oldXP = getUserLevelData()?.xp || 0
+  const oldLevelBefore = getUserLevelData()?.level || 1
+
+  console.log('[XP] XP granted', {
+    activity: type,
+    xpGranted: XP_VALUES[type] || 0,
+    xpBefore: oldXP,
+    xpAfter: oldXP + (XP_VALUES[type] || 0),
+    levelBefore: oldLevelBefore
+  })
+
   // Si el certificado ya está desbloqueado, no dar más XP
   const certificateUnlocked = await isCertificateUnlocked()
   if (certificateUnlocked) {
@@ -183,6 +194,10 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
 
   // Registrar actividad si subió de nivel
   if (newLevel > oldLevel) {
+    console.log('[LEVEL] Level up', {
+      oldLevel,
+      newLevel
+    })
     registerActivity('level_up', '¡Subiste de nivel!', `Nivel ${newLevel}: ${LEVELS[newLevel].name}`)
     
     // Mostrar toast de nivel aumentado solo si se permite y no se ha notificado este nivel

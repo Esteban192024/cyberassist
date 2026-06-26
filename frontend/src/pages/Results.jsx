@@ -42,10 +42,12 @@ function Results() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
   useEffect(() => {
+    console.log('[NAVIGATION] Enter Results', { pathname: location.pathname, timestamp: new Date().toISOString(), userId: currentUser?.id })
     const loadData = async () => {
       // Invalidar cache para asegurar datos frescos
       invalidateUserCache()
       
+      console.log('[SYNC] Loading data for Results')
       setIsLoading(true)
       const start = performance.now()
       const data = await loadResultsPageData()
@@ -53,8 +55,14 @@ function Results() {
         console.info(`[Perf] Results.jsx: ${Math.round(performance.now() - start)}ms`)
       }
       if (data) {
-        console.log('[DEBUG] Results - diagnosticsCount:', data.diagnosticsCount)
-        console.log('[DEBUG] Results - simulationsCount:', data.simulationsCount)
+        console.log('[SYNC] Final values rendered for Results:', {
+          diagnosticsCount: data.diagnosticsCount,
+          simulationsCount: data.simulationsCount,
+          achievementsCount: data.unlockedAchievements?.length || 0,
+          certificatesCount: data.certificateUnlocked ? 1 : 0,
+          xp: data.xp,
+          level: data.level
+        })
         setResultsData(data)
         setAllHistory(data.allHistory || [])
         setChartData(data.chartData || [])
@@ -62,6 +70,9 @@ function Results() {
       setIsLoading(false)
     }
     loadData()
+    return () => {
+      console.log('[NAVIGATION] Exit Results', { pathname: location.pathname, timestamp: new Date().toISOString() })
+    }
   }, [location.pathname])
 
   const results = resultsData?.results || []

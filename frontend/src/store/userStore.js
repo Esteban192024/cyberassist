@@ -75,6 +75,7 @@ export const getUserData = async () => {
     results = diagnosticsData.data || []
     simulationsResults = simulationsData.data || []
   } catch (error) {
+    console.error('[DEBUG] getUserData - API Error fetching diagnostics/simulations:', error)
     return null
   }
 
@@ -99,6 +100,13 @@ export const getUserData = async () => {
   const diagnosticsComplete = learning.diagnostic.complete
   const simulationsComplete = learning.simulation.complete
   const programComplete = learning.programComplete
+
+  console.log('[CERTIFICATE] Evaluation', {
+    diagnosticMastered: diagnosticsCount,
+    simulationMastered: simulationsCount,
+    requirementsMet: programComplete ? 'YES' : 'NO',
+    certificateUnlocked: certificateUnlocked ? 'YES' : 'NO'
+  })
 
   const avgScore = results.length > 0
     ? Math.round(results.reduce((acc, r) => acc + r.score, 0) / results.length)

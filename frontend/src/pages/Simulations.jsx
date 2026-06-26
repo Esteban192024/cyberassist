@@ -167,6 +167,13 @@ function Simulations() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   const userId = currentUser?.id
 
+  useEffect(() => {
+    console.log('[NAVIGATION] Enter Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString(), userId })
+    return () => {
+      console.log('[NAVIGATION] Exit Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
+    }
+  }, [])
+
   const initialProgress = getSimulationProgress(userId)
 
   const sessionScenarios = useMemo(
@@ -193,11 +200,19 @@ function Simulations() {
   const handleAnswer = (option) => {
     if (isLocked || !currentSim || !userId) return
 
+    const masteredBefore = getMasteredScenarios(userId).length
     setSelectedAnswer(option)
     setIsLocked(true)
 
     const isCorrect = option.id === currentSim.correctAnswer || option.correct
     recordTopicAttempt(userId, currentSim.topic, isCorrect)
+
+    console.log('[SIMULATION] Scenario answered', {
+      scenarioId: currentSim.id,
+      correct: isCorrect,
+      masteredBefore,
+      masteredAfter: isCorrect ? masteredBefore + 1 : masteredBefore
+    })
 
     if (isCorrect) {
       setScore((prev) => prev + 1)
@@ -265,7 +280,14 @@ function Simulations() {
         })
 
         // Actualizar el cache local
-        await fetchUserProgress()
+        console.log('[SIMULATION] Session completed', {
+          score,
+          total: totalSession,
+          percentage: Math.round((score / totalSession) * 100),
+          fetchUserProgressExecuted: true
+        })
+        const progressResponse = await fetchUserProgress()
+        console.log('[SIMULATION] fetchUserProgress response:', progressResponse)
       } catch (error) {
         console.error('Error saving simulation to database:', error)
         throw error

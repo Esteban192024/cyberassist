@@ -67,6 +67,7 @@ export const getUserActivities = async () => {
     const response = await activityAPI.getUserActivities()
     return response.data || []
   } catch (error) {
+    console.error('[DEBUG] getUserActivities - API Error:', error)
     return []
   }
 }
