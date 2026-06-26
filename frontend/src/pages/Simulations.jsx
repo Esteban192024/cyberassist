@@ -36,6 +36,7 @@ import {
   getCumulativeTopicAnalysis,
   sanitizeTopicList,
   fetchUserProgress,
+  getMasteredScenarios,
 } from '../utils/progressHelper'
 import { simulationAPI } from '../services/api'
 import {
