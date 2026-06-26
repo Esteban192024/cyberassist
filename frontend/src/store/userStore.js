@@ -101,6 +101,11 @@ export const getUserData = async () => {
   const simulationsComplete = learning.simulation.complete
   const programComplete = learning.programComplete
 
+  console.log('[DEBUG] getUserData - diagnosticsCount from getLearningProgress:', {
+    diagnosticsCount,
+    source: apiProgressCache ? 'apiProgressCache via getLearningProgress' : 'localStorage via getLearningProgress'
+  })
+
   console.log('[CERTIFICATE] Evaluation', {
     diagnosticMastered: diagnosticsCount,
     simulationMastered: simulationsCount,
@@ -241,13 +246,18 @@ function getResultsDataFromUser(userData) {
     avgScore: userData.avgScore,
     bestScore: userData.bestScore,
     lastScore: userData.lastScore,
+    unlockedAchievements: userData.unlockedAchievements,
   }
 }
 
 export const getResultsData = async () => {
+  console.log('[DEBUG] getResultsData - START')
   const userData = await getUserData()
+  console.log('[DEBUG] getResultsData - userData.diagnosticsCount:', userData?.diagnosticsCount)
   if (!userData) return null
-  return getResultsDataFromUser(userData)
+  const resultsData = getResultsDataFromUser(userData)
+  console.log('[DEBUG] getResultsData - RETURNING diagnosticsCount:', resultsData.diagnosticsCount)
+  return resultsData
 }
 
 export const getSimulationsData = async () => {

@@ -79,16 +79,23 @@ let apiProgressCache = null
 let apiDiagnosticsCache = null
 let apiSimulationsCache = null
 
+export const invalidateApiProgressCache = () => {
+  apiProgressCache = null
+}
+
 export async function fetchUserProgress() {
+  console.log('[DEBUG] fetchUserProgress - BEFORE apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
   try {
     const response = await userAPI.getProfile()
     if (response.data?.userProgress) {
       apiProgressCache = response.data.userProgress
+      console.log('[DEBUG] fetchUserProgress - AFTER apiProgressCache:', { diagnosticMastered: apiProgressCache.diagnosticMastered, source: 'API' })
       return response.data.userProgress
     }
   } catch (error) {
     console.error('Error fetching user progress:', error)
   }
+  console.log('[DEBUG] fetchUserProgress - FAILED, apiProgressCache remains:', apiProgressCache ? 'UNCHANGED' : 'NULL')
   return null
 }
 
@@ -160,9 +167,12 @@ export function isScenarioMastered(userId, scenarioId) {
 export function markQuestionMastered(userId, questionId) {
   if (!userId || !questionId) return false
   const mastered = getMasteredQuestions(userId)
+  console.log('[DEBUG] markQuestionMastered - BEFORE:', { masteredCount: mastered.length, source: 'localStorage' })
   if (mastered.includes(questionId)) return false
   mastered.push(questionId)
   writeJson(keys.masteredQuestions(userId), mastered)
+  invalidateApiProgressCache()
+  console.log('[DEBUG] markQuestionMastered - AFTER:', { masteredCount: mastered.length, source: 'localStorage' })
   return true
 }
 
@@ -175,6 +185,7 @@ export function markScenarioMastered(userId, scenarioId) {
   if (mastered.includes(scenarioId)) return false
   mastered.push(scenarioId)
   writeJson(keys.masteredScenarios(userId), mastered)
+  invalidateApiProgressCache()
   return true
 }
 
@@ -224,10 +235,12 @@ export function selectPendingForSession(pendingItems, maxCount = ITEMS_PER_SESSI
 }
 
 export function getDiagnosticProgress(userId) {
+  console.log('[DEBUG] getDiagnosticProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
   // Primero intentar usar el cache de la API
   if (apiProgressCache) {
     const mastered = apiProgressCache.diagnosticMastered || 0
     const total = apiProgressCache.diagnosticTotal || TOTAL_DIAGNOSTIC_ITEMS
+    console.log('[DEBUG] getDiagnosticProgress - USING apiProgressCache:', { mastered, total, source: 'apiProgressCache' })
     return {
       mastered,
       total,
@@ -240,6 +253,7 @@ export function getDiagnosticProgress(userId) {
   // Fallback a localStorage
   const mastered = getMasteredQuestions(userId).length
   const total = TOTAL_DIAGNOSTIC_ITEMS
+  console.log('[DEBUG] getDiagnosticProgress - USING localStorage:', { mastered, total, source: 'localStorage' })
   return {
     mastered,
     total,
@@ -332,6 +346,7 @@ export function getCumulativeTopicAnalysis(userId) {
  * Progreso global del programa (fuente única de verdad).
  */
 export function getLearningProgress(userId) {
+  console.log('[DEBUG] getLearningProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
   if (!userId) {
     return {
       diagnostic: {
@@ -357,6 +372,13 @@ export function getLearningProgress(userId) {
   const diagnostic = getDiagnosticProgress(userId)
   const simulation = getSimulationProgress(userId)
   const { strengths, weaknesses } = getCumulativeTopicAnalysis(userId)
+
+  console.log('[DEBUG] getLearningProgress - RETURNING:', {
+    diagnosticMastered: diagnostic.mastered,
+    diagnosticSource: apiProgressCache ? 'apiProgressCache' : 'localStorage',
+    simulationMastered: simulation.mastered,
+    programComplete: diagnostic.complete && simulation.complete
+  })
 
   return {
     diagnostic,
