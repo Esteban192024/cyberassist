@@ -53,6 +53,8 @@ function Results() {
         console.info(`[Perf] Results.jsx: ${Math.round(performance.now() - start)}ms`)
       }
       if (data) {
+        console.log('[DEBUG] Results - diagnosticsCount:', data.diagnosticsCount)
+        console.log('[DEBUG] Results - simulationsCount:', data.simulationsCount)
         setResultsData(data)
         setAllHistory(data.allHistory || [])
         setChartData(data.chartData || [])

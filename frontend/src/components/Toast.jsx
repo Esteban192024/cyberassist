@@ -89,12 +89,14 @@ const ToastContainer = () => {
   const [queue, setQueue] = useState([])
 
   const addToast = (type, message, duration = 3000) => {
+    console.log('[DEBUG] window.showToast() called:', { type, message })
     // Verificar si ya existe un toast idéntico en cola o visible
     const isDuplicate = [...toasts, ...queue].some(
       toast => toast.type === type && toast.message === message
     )
     
     if (isDuplicate) {
+      console.log('[DEBUG] Toast blocked as duplicate:', { type, message })
       return // No agregar toast duplicado
     }
     

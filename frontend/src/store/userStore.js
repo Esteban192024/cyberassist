@@ -13,7 +13,7 @@ import {
   getUnlockedAchievements,
   getAllAchievements,
 } from '../utils/achievementsHelper'
-import { getLearningProgress, sanitizeTopicList, fetchDiagnostics, fetchSimulations, fetchUserProgress } from '../utils/progressHelper'
+import { getLearningProgress, sanitizeTopicList, fetchDiagnostics, fetchSimulations, fetchUserProgress, getCachedProgress } from '../utils/progressHelper'
 import { getUserActivities } from '../utils/activityHelper'
 import { diagnosticAPI, simulationAPI, certificateAPI } from '../services/api'
 
@@ -56,7 +56,10 @@ export const getUserData = async () => {
 
   // Verificar cache
   const now = Date.now()
+  console.log('[DEBUG] getUserData - userDataCache exists:', !!userDataCache)
+  console.log('[DEBUG] getUserData - apiProgressCache:', getCachedProgress())
   if (userDataCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    console.log('[DEBUG] getUserData - Using cached userDataCache')
     return userDataCache
   }
 

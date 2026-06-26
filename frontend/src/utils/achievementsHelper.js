@@ -35,6 +35,7 @@ function hasPerfectSimulationSession(simulationsResults) {
 }
 
 async function evaluateAchievements(context = {}, { silent = false } = {}) {
+  console.log('[DEBUG] checkAchievements() called with context:', context)
   const newlyUnlocked = []
   
   // Obtener logros desbloqueados del usuario desde API
@@ -144,6 +145,7 @@ export const isAchievementUnlocked = (achievementCode) => {
 }
 
 export const unlockAchievement = async (achievementCode) => {
+  console.log('[DEBUG] unlockAchievement() called with code:', achievementCode)
   try {
     const response = await achievementAPI.unlock({ code: achievementCode })
     const achievement = response.data.userAchievement.achievement

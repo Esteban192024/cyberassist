@@ -46,7 +46,11 @@ function Profile() {
       if (import.meta.env.DEV) {
         console.info(`[Perf] Profile.jsx: ${Math.round(performance.now() - start)}ms`)
       }
-      setStats(data)
+      if (data) {
+        console.log('[DEBUG] Profile - diagnosticsCount:', data.diagnosticsCount)
+        console.log('[DEBUG] Profile - simulationsCount:', data.simulationsCount)
+        setStats(data)
+      }
       setIsLoading(false)
     }
     loadStats()

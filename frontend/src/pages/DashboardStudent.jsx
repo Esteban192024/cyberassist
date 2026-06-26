@@ -43,6 +43,8 @@ function DashboardStudent() {
         console.info(`[Perf] DashboardStudent.jsx: ${Math.round(performance.now() - start)}ms`)
       }
       if (data) {
+        console.log('[DEBUG] Dashboard - diagnosticsCount:', data.dashboardStats.diagnosticsCount)
+        console.log('[DEBUG] Dashboard - simulationsCount:', data.dashboardStats.simulationsCount)
         setDashboardStats(data.dashboardStats)
         setChartData(data.chartData)
         setActivities(data.activities)
