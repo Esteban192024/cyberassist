@@ -1,18 +1,23 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, Star, TrendingUp, X } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { generateUniqueId } from '../utils/quizHelper'
 
 const MAX_VISIBLE_TOASTS = 3
 
 const Toast = ({ type, message, onClose, duration = 3000, index }) => {
   const timerRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     console.log('[TOAST] Auto close started', { type, message, duration })
     timerRef.current = setTimeout(() => {
       console.log('[TOAST] Auto close fired', { type, message })
-      onClose()
+      onCloseRef.current()
     }, duration)
     return () => {
       if (timerRef.current) {
@@ -20,7 +25,7 @@ const Toast = ({ type, message, onClose, duration = 3000, index }) => {
         clearTimeout(timerRef.current)
       }
     }
-  }, [duration, onClose])
+  }, [duration])
 
   const handleClose = () => {
     console.log('[TOAST] Removed (manual)', { type, message })
@@ -122,7 +127,7 @@ const ToastContainer = () => {
     }
   }
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     console.log('[TOAST] Removed', { id })
     setToasts(prev => {
       const filtered = prev.filter(toast => toast.id !== id)
@@ -136,7 +141,7 @@ const ToastContainer = () => {
       
       return filtered
     })
-  }
+  }, [queue])
 
   const addToastRef = useRef(addToast)
 
