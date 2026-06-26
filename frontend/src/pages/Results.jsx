@@ -161,8 +161,8 @@ function Results() {
 
   const riskLevel = latestResult.riskLevel || latestResult.level || 'Medio'
   const maxScore = latestResult.total || latestResult.masteredGoal || 5
-  const masteredTotal = latestResult.masteredTotal ?? diagnosticsCount
-  const masteredGoal = latestResult.masteredGoal ?? diagnosticsTotal
+  const masteredTotal = diagnosticsCount
+  const masteredGoal = diagnosticsTotal
   const diagnosticProgressPct =
     masteredGoal > 0 ? Math.round((masteredTotal / masteredGoal) * 100) : 0
   const personalizedRecommendations = latestResult.personalizedRecommendations || []

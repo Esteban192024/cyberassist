@@ -104,7 +104,7 @@ export const getUserData = async () => {
     ? Math.round(simulationsResults.reduce((acc, r) => acc + r.score, 0) / simulationsResults.length)
     : 0
 
-  const latestResult = results.length > 0 ? results[results.length - 1] : null
+  const latestResult = results.length > 0 ? results[0] : null
   const latestSimulationResult = simulationsResults.length > 0 ? simulationsResults[simulationsResults.length - 1] : null
 
   const latestRiskLevel =
