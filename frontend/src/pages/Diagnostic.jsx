@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, CheckCircle, XCircle, ArrowRight, Award, TrendingUp } from 'lucide-react'
@@ -30,10 +30,11 @@ function Diagnostic() {
   const userId = currentUser?.id
 
   const initialProgress = getDiagnosticProgress(userId)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const sessionQuestions = useMemo(
     () => selectPendingForSession(getPendingQuestions(userId)),
-    [userId]
+    [userId, refreshKey]
   )
 
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -48,6 +49,13 @@ function Diagnostic() {
   const [sessionComplete, setSessionComplete] = useState(false)
 
   const currentQuestion = sessionQuestions[currentIndex]
+
+  // Actualizar shuffledOptions cuando cambia la pregunta actual
+  useEffect(() => {
+    if (currentQuestion?.options) {
+      setShuffledOptions(shuffleArray(currentQuestion.options))
+    }
+  }, [currentQuestion])
   const totalSession = sessionQuestions.length
   const cumulativeProgress = (masteredCount / TOTAL_DIAGNOSTIC_ITEMS) * 100
   const allDiagnosticsComplete = masteredCount >= TOTAL_DIAGNOSTIC_ITEMS
@@ -178,7 +186,20 @@ function Diagnostic() {
   }
 
   const handleContinuePractice = () => {
-    window.location.reload()
+    // Forzar recálculo de preguntas pendientes
+    setRefreshKey((prev) => prev + 1)
+    
+    // Reiniciar el estado local para cargar nuevas preguntas pendientes
+    setCurrentIndex(0)
+    setSelectedAnswer(null)
+    setIsLocked(false)
+    setSessionAnswers([])
+    setSessionComplete(false)
+    setIsSubmitting(false)
+    
+    // Recargar progreso actualizado
+    const updatedProgress = getDiagnosticProgress(userId)
+    setMasteredCount(updatedProgress.mastered)
   }
 
   const handleViewResults = () => navigate('/results')
