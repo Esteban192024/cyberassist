@@ -122,7 +122,9 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
       })
     }
     
-    if (condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)) {
+    // Intentar desbloquear si la condición se cumple y no está desbloqueado
+    // sessionNotified solo controla si mostramos el toast, no si desbloqueamos
+    if (condition && !unlockedCodes.includes(code)) {
       if (silent) {
         try {
           console.log(`[SPECIFIC] ${code} - Calling achievementAPI.unlock (silent mode)`)
@@ -131,21 +133,22 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
           newlyUnlocked.push(code)
           // Actualizar cache
           userAchievementsCache.push({ achievement: { code } })
-          // Marcar como notificado en esta sesión
-          sessionNotified.push(code)
-          sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
         } catch (error) {
           console.error(`[SPECIFIC] ${code} - Error unlocking achievement:`, error.response?.status, error.response?.data, error.message)
         }
       } else {
-        console.log('[DEBUG] evaluateAchievements - calling unlockAchievement for:', code)
+        // Solo mostrar toast si no fue notificado en esta sesión
+        const shouldShowToast = !sessionNotified.includes(code)
+        console.log('[DEBUG] evaluateAchievements - calling unlockAchievement for:', code, 'showToast:', shouldShowToast)
         const achievement = await unlockAchievement(code)
         console.log('[DEBUG] evaluateAchievements - unlockAchievement returned:', achievement)
         if (achievement) {
           newlyUnlocked.push(achievement)
-          // Marcar como notificado en esta sesión
-          sessionNotified.push(code)
-          sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
+          // Marcar como notificado en esta sesión solo si mostramos el toast
+          if (shouldShowToast) {
+            sessionNotified.push(code)
+            sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
+          }
         }
       }
     } else {
