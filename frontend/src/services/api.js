@@ -45,6 +45,7 @@ export const userAPI = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data) => api.put('/users/profile', data),
   updatePassword: (data) => api.put('/users/password', data),
+  updateXpAndLevel: (data) => api.put('/users/xp-level', data),
 };
 
 export const diagnosticAPI = {

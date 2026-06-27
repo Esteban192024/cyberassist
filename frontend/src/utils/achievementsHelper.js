@@ -59,7 +59,7 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
 
   const results = [] // Se obtendrán desde API en el futuro
   const simulationsResults = [] // Se obtendrán desde API en el futuro
-  const userProgress = getUserLevelData() || { level: 1 }
+  const userProgress = await getUserLevelData() || { level: 1 }
   const masteredQuestions = getMasteredQuestions()
   const masteredScenarios = getMasteredScenarios()
   const learning = getLearningProgress()
@@ -162,7 +162,7 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
   }
 
   // Consolidar notificación de nivel al final si cambió
-  const newLevel = getUserLevelData()?.level || oldLevel
+  const newLevel = (await getUserLevelData())?.level || oldLevel
   if (newLevel > oldLevel && !silent) {
     // Mostrar solo un toast del nivel final alcanzado
     if (typeof window !== 'undefined' && window.showToast) {

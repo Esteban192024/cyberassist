@@ -13,7 +13,10 @@ export const createSimulation = async (req, res) => {
       weaknesses,
       simulationMasteredIds,
       masteredScenarioIds,
+      topicLearning,
     } = req.body;
+
+    console.log('[SIMULATION SAVE] Origen: Frontend, Endpoint: POST /simulations, userId:', userId, 'topicLearning recibido:', topicLearning);
 
     const simulationMasteredIdsToSave = Array.isArray(simulationMasteredIds)
       ? simulationMasteredIds
@@ -35,13 +38,17 @@ export const createSimulation = async (req, res) => {
       },
     });
 
+    console.log('[SIMULATION SAVE] Simulación guardada en PostgreSQL, id:', simulation.id);
+
     // Actualizar UserProgress
     const userProgress = await prisma.userProgress.findUnique({
       where: { userId },
     });
 
     if (userProgress) {
-      await prisma.userProgress.update({
+      console.log('[USER PROGRESS UPDATE] Actualizando UserProgress para userId:', userId);
+
+      const updatedUserProgress = await prisma.userProgress.update({
         where: { userId },
         data: {
           simulationMastered: Math.max(userProgress.simulationMastered, masteredTotal),
@@ -49,11 +56,15 @@ export const createSimulation = async (req, res) => {
           simulationMasteredIds: simulationMasteredIdsToSave
             ? Array.from(new Set([...userProgress.simulationMasteredIds, ...simulationMasteredIdsToSave]))
             : userProgress.simulationMasteredIds,
+          topicLearning: topicLearning || userProgress.topicLearning,
           programComplete:
             userProgress.diagnosticMastered >= userProgress.diagnosticTotal &&
             Math.max(userProgress.simulationMastered, masteredTotal) >= masteredGoal,
         },
       });
+
+      console.log('[TOPIC LEARNING UPDATE] topicLearning actualizado en UserProgress:', updatedUserProgress.topicLearning);
+      console.log('[USER PROGRESS UPDATE] UserProgress actualizado exitosamente para userId:', userId);
     }
 
     res.status(201).json({

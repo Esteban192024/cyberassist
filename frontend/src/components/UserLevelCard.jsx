@@ -9,8 +9,16 @@ import {
 } from '../utils/levelHelper'
 
 function UserLevelCard() {
-  const [levelData] = useState(() => getUserLevelData())
+  const [levelData, setLevelData] = useState(null)
   const [showAnimation, setShowAnimation] = useState(false)
+
+  useEffect(() => {
+    async function loadLevelData() {
+      const data = await getUserLevelData()
+      setLevelData(data)
+    }
+    loadLevelData()
+  }, [])
 
   useEffect(() => {
     if (levelData && showAnimation) {

@@ -3,6 +3,7 @@ import { comparePassword, hashPassword } from '../utils/password.js';
 
 export const getProfile = async (req, res) => {
   try {
+    console.log('[PROFILE READ] Origen: PostgreSQL, Endpoint: GET /users/profile, userId:', req.user.userId);
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
       select: {
@@ -27,10 +28,39 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log('[PROFILE READ] Resultado guardado en PostgreSQL:', { xp: user.xp, level: user.level });
     res.json(user);
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+};
+
+export const updateXpAndLevel = async (req, res) => {
+  try {
+    const { xp, level } = req.body;
+    const userId = req.user.userId;
+
+    console.log('[XP WRITE] Origen: Frontend, Endpoint: PUT /users/xp-level, Valor recibido:', { xp, level });
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { xp, level },
+      select: { id: true, xp: true, level: true }
+    });
+
+    console.log('[DATABASE UPDATE SUCCESS] User.xp y User.level actualizados en PostgreSQL:', { userId, xp: updatedUser.xp, level: updatedUser.level });
+    console.log('[XP WRITE] Resultado guardado en PostgreSQL:', { xp: updatedUser.xp, level: updatedUser.level });
+    console.log('[LEVEL WRITE] Resultado guardado en PostgreSQL:', { level: updatedUser.level });
+
+    res.json({
+      message: 'XP and level updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.log('[DATABASE UPDATE ERROR] Error al actualizar User.xp y User.level en PostgreSQL:', error.message);
+    console.error('Update XP/Level error:', error);
+    res.status(500).json({ error: 'Failed to update XP and level' });
   }
 };
 

@@ -70,7 +70,7 @@ export const getUserData = async () => {
     return null
   }
 
-  const levelData = getUserLevelData()
+  const levelData = await getUserLevelData()
   const unlockedAchievements = await getUnlockedAchievements()
   
   let certificateUnlocked

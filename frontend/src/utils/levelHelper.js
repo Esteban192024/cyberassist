@@ -1,6 +1,10 @@
 // Sistema de niveles y XP para gamificación
 import { registerActivity } from './activityHelper'
-import { certificateAPI } from '../services/api'
+import { certificateAPI, userAPI } from '../services/api'
+
+// Cache para userLevelData para evitar múltiples llamadas a API
+let userLevelDataCache = null
+let userLevelDataCacheExpiry = 0
 
 const LEVELS = {
   1: { name: 'Novato Digital', xpRequired: 0, icon: '🌱' },
@@ -92,16 +96,45 @@ export const unlockCertificate = async (type = 'program', securityLevel = 'Alto'
   }
 }
 
-export const getUserLevelData = () => {
+export const getUserLevelData = async () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   if (!currentUser) return null
 
-  const userProgress = JSON.parse(localStorage.getItem(`userProgress_${currentUser.id}`)) || {
-    xp: 0,
-    level: 1
+  // Verificar caché
+  const now = Date.now()
+  if (userLevelDataCache && (now - userLevelDataCacheExpiry) < 5000) {
+    console.log('[LEVEL READ] [XP READ] Usando caché local')
+    return userLevelDataCache
   }
 
-  return userProgress
+  console.log('[LEVEL READ] [XP READ] Origen: PostgreSQL, Endpoint: GET /users/profile')
+  try {
+    const response = await userAPI.getProfile()
+    const levelData = {
+      xp: response.data.xp,
+      level: response.data.level
+    }
+    console.log('[LEVEL READ] [XP READ] Valor recibido desde PostgreSQL:', levelData)
+    
+    // Actualizar caché
+    userLevelDataCache = levelData
+    userLevelDataCacheExpiry = Date.now()
+    
+    return levelData
+  } catch (error) {
+    console.error('[LEVEL READ] [XP READ] Error al obtener datos desde API:', error)
+    // Fallback a localStorage si API falla
+    const userProgress = JSON.parse(localStorage.getItem(`userProgress_${currentUser.id}`)) || {
+      xp: 0,
+      level: 1
+    }
+    return userProgress
+  }
+}
+
+export const invalidateUserLevelDataCache = () => {
+  userLevelDataCache = null
+  userLevelDataCacheExpiry = 0
 }
 
 export const calculateLevel = (xp) => {
@@ -133,10 +166,11 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
   if (!currentUser) return null
 
-  const oldXP = getUserLevelData()?.xp || 0
-  const oldLevelBefore = getUserLevelData()?.level || 1
+  const currentLevelData = await getUserLevelData()
+  const oldXP = currentLevelData?.xp || 0
+  const oldLevelBefore = currentLevelData?.level || 1
 
-  console.log('[XP] XP granted', {
+  console.log('[XP WRITE] Inicio de addXP', {
     activity: type,
     xpGranted: XP_VALUES[type] || 0,
     xpBefore: oldXP,
@@ -147,9 +181,10 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
   // Si el certificado ya está desbloqueado, no dar más XP
   const certificateUnlocked = await isCertificateUnlocked()
   if (certificateUnlocked) {
+    const levelData = await getUserLevelData()
     return {
-      xp: getUserLevelData()?.xp || 0,
-      level: getUserLevelData()?.level || 1,
+      xp: levelData?.xp || 0,
+      level: levelData?.level || 1,
       levelUp: false,
       xpAdded: 0,
       certificateUnlocked: true
@@ -158,9 +193,10 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
 
   // Verificar si la actividad ya fue recompensada (si se proporciona activityId)
   if (activityId && isActivityRewarded(activityId)) {
+    const levelData = await getUserLevelData()
     return {
-      xp: getUserLevelData()?.xp || 0,
-      level: getUserLevelData()?.level || 1,
+      xp: levelData?.xp || 0,
+      level: levelData?.level || 1,
       levelUp: false,
       xpAdded: 0,
       alreadyRewarded: true
@@ -168,19 +204,33 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
   }
 
   const xpToAdd = XP_VALUES[type] || 0
-  const userProgress = JSON.parse(localStorage.getItem(`userProgress_${currentUser.id}`)) || {
-    xp: 0,
-    level: 1
-  }
-
-  const oldLevel = userProgress.level
-  const newXP = userProgress.xp + xpToAdd
+  const oldLevel = currentLevelData?.level || 1
+  const newXP = (currentLevelData?.xp || 0) + xpToAdd
   const newLevel = calculateLevel(newXP)
 
-  userProgress.xp = newXP
-  userProgress.level = newLevel
+  console.log('[XP WRITE] Origen: Frontend, Endpoint: PUT /users/xp-level, Valor a enviar:', { xp: newXP, level: newLevel })
 
-  localStorage.setItem(`userProgress_${currentUser.id}`, JSON.stringify(userProgress))
+  // Actualizar en PostgreSQL
+  let updatedUser
+  try {
+    const response = await userAPI.updateXpAndLevel({ xp: newXP, level: newLevel })
+    updatedUser = response.data.user
+    console.log('[XP WRITE] Resultado guardado en PostgreSQL:', { xp: updatedUser.xp, level: updatedUser.level })
+    console.log('[LEVEL WRITE] Resultado guardado en PostgreSQL:', { level: updatedUser.level })
+  } catch (error) {
+    console.error('[XP WRITE] Error al actualizar en API:', error)
+    throw error
+  }
+
+  // Actualizar caché
+  userLevelDataCache = { xp: updatedUser.xp, level: updatedUser.level }
+  userLevelDataCacheExpiry = Date.now()
+
+  // También guardar en localStorage como fallback temporal
+  localStorage.setItem(`userProgress_${currentUser.id}`, JSON.stringify({
+    xp: updatedUser.xp,
+    level: updatedUser.level
+  }))
 
   // Marcar actividad como recompensada si se proporcionó activityId
   if (activityId) {
@@ -194,7 +244,7 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
 
   // Registrar actividad si subió de nivel
   if (newLevel > oldLevel) {
-    console.log('[LEVEL] Level up', {
+    console.log('[LEVEL WRITE] Level up', {
       oldLevel,
       newLevel
     })
@@ -210,8 +260,8 @@ export const addXP = async (type, activityId = null, showLevelToast = true) => {
   }
 
   return {
-    xp: newXP,
-    level: newLevel,
+    xp: updatedUser.xp,
+    level: updatedUser.level,
     levelUp: newLevel > oldLevel,
     xpAdded: xpToAdd
   }

@@ -15,7 +15,10 @@ export const createDiagnostic = async (req, res) => {
       generalRecommendations,
       diagnosticMasteredIds,
       masteredQuestionIds,
+      topicLearning,
     } = req.body;
+
+    console.log('[DIAGNOSTIC SAVE] Origen: Frontend, Endpoint: POST /diagnostics, userId:', userId, 'topicLearning recibido:', topicLearning);
 
     const diagnosticMasteredIdsToSave = Array.isArray(diagnosticMasteredIds)
       ? diagnosticMasteredIds
@@ -39,13 +42,17 @@ export const createDiagnostic = async (req, res) => {
       },
     });
 
+    console.log('[DIAGNOSTIC SAVE] Diagnóstico guardado en PostgreSQL, id:', diagnostic.id);
+
     // Actualizar UserProgress
     const userProgress = await prisma.userProgress.findUnique({
       where: { userId },
     });
 
     if (userProgress) {
-      await prisma.userProgress.update({
+      console.log('[USER PROGRESS UPDATE] Actualizando UserProgress para userId:', userId);
+      
+      const updatedUserProgress = await prisma.userProgress.update({
         where: { userId },
         data: {
           diagnosticMastered: Math.max(userProgress.diagnosticMastered, masteredTotal),
@@ -53,11 +60,15 @@ export const createDiagnostic = async (req, res) => {
           diagnosticMasteredIds: diagnosticMasteredIdsToSave
             ? Array.from(new Set([...userProgress.diagnosticMasteredIds, ...diagnosticMasteredIdsToSave]))
             : userProgress.diagnosticMasteredIds,
+          topicLearning: topicLearning || userProgress.topicLearning,
           programComplete:
             Math.max(userProgress.diagnosticMastered, masteredTotal) >= masteredGoal &&
             userProgress.simulationMastered >= userProgress.simulationTotal,
         },
       });
+
+      console.log('[TOPIC LEARNING UPDATE] topicLearning actualizado en UserProgress:', updatedUserProgress.topicLearning);
+      console.log('[USER PROGRESS UPDATE] UserProgress actualizado exitosamente para userId:', userId);
     }
 
     res.status(201).json({
