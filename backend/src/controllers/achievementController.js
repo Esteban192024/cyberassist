@@ -172,7 +172,10 @@ export const unlockAchievement = async (req, res) => {
     const { code } = req.body;
     const userId = req.user.userId;
 
+    console.log(`[ACHIEVEMENT CHECK] Request to unlock: ${code} for user: ${userId}`);
+
     if (!code) {
+      console.log(`[ACHIEVEMENT CHECK] Missing achievement code`);
       return res.status(400).json({ error: 'Achievement code is required' });
     }
 
@@ -181,6 +184,7 @@ export const unlockAchievement = async (req, res) => {
     });
 
     if (!achievement) {
+      console.log(`[ACHIEVEMENT CHECK] Achievement ${code} not found`);
       return res.status(404).json({ error: 'Achievement not found' });
     }
 
@@ -194,6 +198,7 @@ export const unlockAchievement = async (req, res) => {
     });
 
     if (existing) {
+      console.log(`[ACHIEVEMENT CHECK] Achievement ${code} already unlocked for user ${userId}`);
       return res.status(400).json({ error: 'Achievement already unlocked' });
     }
 
@@ -202,6 +207,16 @@ export const unlockAchievement = async (req, res) => {
       prisma.user.findUnique({ where: { id: userId } }),
       prisma.userProgress.findUnique({ where: { userId } })
     ]);
+
+    console.log(`[ACHIEVEMENT CHECK] User data from DB:`, {
+      userId,
+      xp: user?.xp,
+      level: user?.level,
+      diagnosticMastered: userProgress?.diagnosticMastered,
+      diagnosticMasteredIds: userProgress?.diagnosticMasteredIds,
+      simulationMastered: userProgress?.simulationMastered,
+      simulationMasteredIds: userProgress?.simulationMasteredIds
+    });
 
     if (!user || !userProgress) {
       return res.status(404).json({ error: 'User or user progress not found' });
@@ -260,13 +275,14 @@ export const unlockAchievement = async (req, res) => {
         isEligible = false;
     }
 
+    console.log(`[ACHIEVEMENT CHECK] Eligible: ${isEligible} for ${code} (user ${userId})`);
+
     if (!isEligible) {
-      console.log(`[ACHIEVEMENT VALIDATION] User ${userId} not eligible for ${code}`);
+      console.log(`[ACHIEVEMENT UNLOCK] FAILED - user ${userId} not eligible for ${code}`);
       return res.status(403).json({ error: 'User does not meet the criteria for this achievement' });
     }
 
-    console.log(`[ACHIEVEMENT VALIDATION] User ${userId} eligible for ${code}, unlocking...`);
-
+    console.log(`[ACHIEVEMENT UNLOCK] Starting for user ${userId}, achievement ${code}`);
     const userAchievement = await prisma.userAchievement.create({
       data: {
         userId,
@@ -276,13 +292,14 @@ export const unlockAchievement = async (req, res) => {
         achievement: true,
       },
     });
+    console.log(`[ACHIEVEMENT DB INSERT] Success! UserAchievement id: ${userAchievement.id}`);
 
     res.json({
       message: 'Achievement unlocked successfully',
       userAchievement,
     });
   } catch (error) {
-    console.error('Unlock achievement error:', error);
+    console.error('[ACHIEVEMENT UNLOCK] Error:', error);
     res.status(500).json({ error: 'Failed to unlock achievement' });
   }
 };
