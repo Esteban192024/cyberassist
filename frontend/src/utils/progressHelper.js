@@ -89,6 +89,8 @@ export async function fetchUserProgress() {
     const response = await userAPI.getProfile()
     if (response.data?.userProgress) {
       apiProgressCache = response.data.userProgress
+      console.log('[DEBUG] fetchUserProgress - FULL STRUCTURE FROM BACKEND:')
+      console.log(JSON.stringify(apiProgressCache, null, 2))
       console.log('[DEBUG] fetchUserProgress - AFTER apiProgressCache:', { diagnosticMastered: apiProgressCache.diagnosticMastered, source: 'API' })
       return response.data.userProgress
     }
