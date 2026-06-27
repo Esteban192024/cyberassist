@@ -159,6 +159,57 @@ export const getLatestDiagnostic = async (req, res) => {
   }
 };
 
+export const markQuestionAsMastered = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { questionId } = req.body;
+
+    console.log('[MARK QUESTION MASTERED] 1. Inicio - userId:', userId, '- questionId:', questionId);
+
+    const userProgress = await prisma.userProgress.findUnique({
+      where: { userId },
+    });
+
+    if (!userProgress) {
+      return res.status(404).json({ error: 'User progress not found' });
+    }
+
+    console.log('[MARK QUESTION MASTERED] 2. UserProgress antes de actualizar:', {
+      diagnosticMastered: userProgress.diagnosticMastered,
+      diagnosticMasteredIds: userProgress.diagnosticMasteredIds
+    });
+
+    // Add the questionId if it's not already there
+    const newDiagnosticMasteredIds = Array.from(
+      new Set([...userProgress.diagnosticMasteredIds, questionId])
+    );
+
+    const updatedUserProgress = await prisma.userProgress.update({
+      where: { userId },
+      data: {
+        diagnosticMasteredIds: newDiagnosticMasteredIds,
+        diagnosticMastered: newDiagnosticMasteredIds.length,
+        programComplete:
+          newDiagnosticMasteredIds.length >= userProgress.diagnosticTotal &&
+          userProgress.simulationMastered >= userProgress.simulationTotal
+      }
+    });
+
+    console.log('[MARK QUESTION MASTERED] 3. UserProgress actualizado (verificación):', {
+      diagnosticMastered: updatedUserProgress.diagnosticMastered,
+      diagnosticMasteredIds: updatedUserProgress.diagnosticMasteredIds
+    });
+
+    res.json({
+      message: 'Question marked as mastered successfully',
+      userProgress: updatedUserProgress
+    });
+  } catch (error) {
+    console.error('[MARK QUESTION MASTERED] ERROR:', error);
+    res.status(500).json({ error: 'Failed to mark question as mastered' });
+  }
+};
+
 export const updateProgress = async (req, res) => {
   try {
     const userId = req.user.userId;

@@ -169,58 +169,44 @@ export function getMasteredScenarios() {
   return apiProgressCache?.simulationMasteredIds || []
 }
 
-export function markQuestionMastered(userId, questionId) {
+export async function markQuestionMastered(userId, questionId) {
   console.log('[PROGRESS MARK] markQuestionMastered called for questionId:', questionId)
   if (!questionId) return false
 
-  if (!apiProgressCache) {
-    console.log('[PROGRESS MARK] apiProgressCache is null, initializing it')
-    apiProgressCache = {
-      diagnosticMasteredIds: [],
-      simulationMasteredIds: [],
-      topicLearning: {},
-      diagnosticMastered: 0,
-      simulationMastered: 0,
-    }
+  try {
+    console.log('[PROGRESS MARK] Calling diagnosticAPI.markQuestionAsMastered...')
+    const response = await diagnosticAPI.markQuestionAsMastered({ questionId })
+    console.log('[PROGRESS MARK] API Response received:', response)
+    
+    // Update cache with the verified progress from the server
+    apiProgressCache = response.data.userProgress
+    console.log('[PROGRESS MARK] apiProgressCache updated from server:', apiProgressCache)
+    
+    return true
+  } catch (error) {
+    console.error('[PROGRESS MARK] Error marking question as mastered:', error)
+    throw error
   }
-
-  const masteredIds = getMasteredQuestions()
-  console.log('[PROGRESS MARK] masteredIds antes de agregar:', JSON.stringify(masteredIds, null, 2))
-  if (masteredIds.includes(questionId)) {
-    console.log('[PROGRESS MARK] questionId ya está en masteredIds, retornando false')
-    return false
-  }
-
-  const updatedIds = Array.from(new Set([...masteredIds, questionId]))
-  apiProgressCache.diagnosticMasteredIds = updatedIds
-  apiProgressCache.diagnosticMastered = updatedIds.length
-
-  console.log('[PROGRESS MARK] apiProgressCache después de actualizar:', JSON.stringify(apiProgressCache, null, 2))
-
-  return true
 }
 
-export function markScenarioMastered(userId, scenarioId) {
+export async function markScenarioMastered(userId, scenarioId) {
+  console.log('[PROGRESS MARK] markScenarioMastered called for scenarioId:', scenarioId)
   if (!scenarioId) return false
 
-  if (!apiProgressCache) {
-    apiProgressCache = {
-      diagnosticMasteredIds: [],
-      simulationMasteredIds: [],
-      topicLearning: {},
-      diagnosticMastered: 0,
-      simulationMastered: 0,
-    }
+  try {
+    console.log('[PROGRESS MARK] Calling simulationAPI.markScenarioAsMastered...')
+    const response = await simulationAPI.markScenarioAsMastered({ scenarioId })
+    console.log('[PROGRESS MARK] API Response received:', response)
+    
+    // Update cache with the verified progress from the server
+    apiProgressCache = response.data.userProgress
+    console.log('[PROGRESS MARK] apiProgressCache updated from server:', apiProgressCache)
+    
+    return true
+  } catch (error) {
+    console.error('[PROGRESS MARK] Error marking scenario as mastered:', error)
+    throw error
   }
-
-  const masteredIds = getMasteredScenarios()
-  if (masteredIds.includes(scenarioId)) return false
-
-  const updatedIds = Array.from(new Set([...masteredIds, scenarioId]))
-  apiProgressCache.simulationMasteredIds = updatedIds
-  apiProgressCache.simulationMastered = updatedIds.length
-
-  return true
 }
 
 export function recordTopicAttempt(userId, topic, isCorrect) {

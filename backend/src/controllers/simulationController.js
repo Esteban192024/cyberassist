@@ -103,6 +103,57 @@ export const getSimulations = async (req, res) => {
   }
 };
 
+export const markScenarioAsMastered = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { scenarioId } = req.body;
+
+    console.log('[MARK SCENARIO MASTERED] 1. Inicio - userId:', userId, '- scenarioId:', scenarioId);
+
+    const userProgress = await prisma.userProgress.findUnique({
+      where: { userId },
+    });
+
+    if (!userProgress) {
+      return res.status(404).json({ error: 'User progress not found' });
+    }
+
+    console.log('[MARK SCENARIO MASTERED] 2. UserProgress antes de actualizar:', {
+      simulationMastered: userProgress.simulationMastered,
+      simulationMasteredIds: userProgress.simulationMasteredIds
+    });
+
+    // Add the scenarioId if it's not already there
+    const newSimulationMasteredIds = Array.from(
+      new Set([...userProgress.simulationMasteredIds, scenarioId])
+    );
+
+    const updatedUserProgress = await prisma.userProgress.update({
+      where: { userId },
+      data: {
+        simulationMasteredIds: newSimulationMasteredIds,
+        simulationMastered: newSimulationMasteredIds.length,
+        programComplete:
+          userProgress.diagnosticMastered >= userProgress.diagnosticTotal &&
+          newSimulationMasteredIds.length >= userProgress.simulationTotal
+      }
+    });
+
+    console.log('[MARK SCENARIO MASTERED] 3. UserProgress actualizado (verificación):', {
+      simulationMastered: updatedUserProgress.simulationMastered,
+      simulationMasteredIds: updatedUserProgress.simulationMasteredIds
+    });
+
+    res.json({
+      message: 'Scenario marked as mastered successfully',
+      userProgress: updatedUserProgress
+    });
+  } catch (error) {
+    console.error('[MARK SCENARIO MASTERED] ERROR:', error);
+    res.status(500).json({ error: 'Failed to mark scenario as mastered' });
+  }
+};
+
 export const getLatestSimulation = async (req, res) => {
   try {
     const userId = req.user.userId;

@@ -91,7 +91,7 @@ function Diagnostic() {
   const cumulativeProgress = (masteredCount / TOTAL_DIAGNOSTIC_ITEMS) * 100
   const allDiagnosticsComplete = masteredCount >= TOTAL_DIAGNOSTIC_ITEMS
 
-  const handleSelectAnswer = (option) => {
+  const handleSelectAnswer = async (option) => {
     console.log('[DIAGNOSTIC ANSWER] 1. handleSelectAnswer called with option:', option)
     if (isLocked || !currentQuestion || !userId) {
       console.log('[DIAGNOSTIC ANSWER] 2. Retornando porque:', { isLocked, hasCurrentQuestion: !!currentQuestion, hasUserId: !!userId })
@@ -117,10 +117,10 @@ function Diagnostic() {
 
     if (isCorrect) {
       console.log('[DIAGNOSTIC ANSWER] 6. Respuesta correcta, llamando a markQuestionMastered')
-      const isNewMaster = markQuestionMastered(userId, currentQuestion.id)
+      const isNewMaster = await markQuestionMastered(userId, currentQuestion.id)
       if (isNewMaster) {
         console.log('[DIAGNOSTIC ANSWER] 7. Nueva pregunta dominada, incrementando masteredCount y addXP')
-        setMasteredCount((prev) => prev + 1)
+        setMasteredCount(getDiagnosticProgress().mastered)
         addXP('question', `question_${currentQuestion.id}`)
       } else {
         console.log('[DIAGNOSTIC ANSWER] 7. Pregunta ya era dominada, no hacemos nada')

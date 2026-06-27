@@ -229,7 +229,7 @@ function Simulations() {
   const totalSession = sessionScenarios.length
   const cumulativeProgress = (masteredCount / TOTAL_SIMULATION_ITEMS) * 100
 
-  const handleAnswer = (option) => {
+  const handleAnswer = async (option) => {
     if (isLocked || !currentSim || !userId) return
 
     const masteredBefore = getMasteredScenarios().length
@@ -248,9 +248,9 @@ function Simulations() {
 
     if (isCorrect) {
       setScore((prev) => prev + 1)
-      const isNewMaster = markScenarioMastered(userId, currentSim.id)
+      const isNewMaster = await markScenarioMastered(userId, currentSim.id)
       if (isNewMaster) {
-        setMasteredCount((prev) => prev + 1)
+        setMasteredCount(getSimulationProgress().mastered)
         addXP('scenario', `scenario_${currentSim.id}`)
       }
     }

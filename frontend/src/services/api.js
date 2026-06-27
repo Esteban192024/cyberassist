@@ -53,12 +53,14 @@ export const diagnosticAPI = {
   getAll: () => api.get('/diagnostics'),
   getLatest: () => api.get('/diagnostics/latest'),
   updateProgress: (data) => api.put('/diagnostics/progress', data),
+  markQuestionAsMastered: (data) => api.post('/diagnostics/mark-mastered', data),
 };
 
 export const simulationAPI = {
   create: (data) => api.post('/simulations', data),
   getAll: () => api.get('/simulations'),
   getLatest: () => api.get('/simulations/latest'),
+  markScenarioAsMastered: (data) => api.post('/simulations/mark-mastered', data),
 };
 
 export const achievementAPI = {
