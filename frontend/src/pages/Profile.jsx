@@ -22,6 +22,7 @@ import {
 import { getDashboardStats } from '../store/userStore'
 import { useAuth } from '../context/AuthContext'
 import { userAPI } from '../services/api'
+import { syncAchievements } from '../utils/achievementsHelper'
 import ProfileSkeleton from '../components/skeletons/ProfileSkeleton'
 
 function Profile() {
@@ -58,6 +59,12 @@ function Profile() {
           level: data.level
         })
         setStats(data)
+        
+        // Sincronizar logros pendientes si el programa está completo
+        if (data.programComplete) {
+          console.log('[SYNC] Program complete detected, syncing achievements')
+          await syncAchievements()
+        }
       }
       setIsLoading(false)
     }

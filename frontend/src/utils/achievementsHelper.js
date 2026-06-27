@@ -105,10 +105,29 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
       willAttemptUnlock: condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)
     })
     console.log('[DEBUG] evaluateAchievements - checking achievement:', code, 'condition:', condition, 'already unlocked:', unlockedCodes.includes(code), 'session notified:', sessionNotified.includes(code))
+    
+    // Logs específicos para simulation_master y program_complete
+    if (code === 'simulation_master' || code === 'program_complete') {
+      console.log(`[SPECIFIC] ${code} - Detailed analysis:`, {
+        code,
+        conditionMet: condition,
+        alreadyUnlocked: unlockedCodes.includes(code),
+        sessionNotified: sessionNotified.includes(code),
+        masteredScenariosLength: masteredScenarios.length,
+        TOTAL_SIMULATION_ITEMS,
+        learningProgramComplete: learning.programComplete,
+        learningDiagnosticComplete: learning.diagnostic.complete,
+        learningSimulationComplete: learning.simulation.complete,
+        willAttemptUnlock: condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)
+      })
+    }
+    
     if (condition && !unlockedCodes.includes(code) && !sessionNotified.includes(code)) {
       if (silent) {
         try {
-          await achievementAPI.unlock({ code })
+          console.log(`[SPECIFIC] ${code} - Calling achievementAPI.unlock (silent mode)`)
+          const response = await achievementAPI.unlock({ code })
+          console.log(`[SPECIFIC] ${code} - Backend response:`, response.status, response.data)
           newlyUnlocked.push(code)
           // Actualizar cache
           userAchievementsCache.push({ achievement: { code } })
@@ -116,7 +135,7 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
           sessionNotified.push(code)
           sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
         } catch (error) {
-          console.error(`Error unlocking achievement ${code}:`, error)
+          console.error(`[SPECIFIC] ${code} - Error unlocking achievement:`, error.response?.status, error.response?.data, error.message)
         }
       } else {
         console.log('[DEBUG] evaluateAchievements - calling unlockAchievement for:', code)
@@ -128,6 +147,15 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
           sessionNotified.push(code)
           sessionStorage.setItem('sessionNotifiedAchievements', JSON.stringify(sessionNotified))
         }
+      }
+    } else {
+      // Log por qué no se intentó desbloquear
+      if (code === 'simulation_master' || code === 'program_complete') {
+        console.log(`[SPECIFIC] ${code} - Not attempting unlock. Reasons:`, {
+          conditionMet: condition,
+          alreadyUnlocked: unlockedCodes.includes(code),
+          sessionNotified: sessionNotified.includes(code)
+        })
       }
     }
   }

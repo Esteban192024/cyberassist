@@ -21,6 +21,7 @@ import CertificateGenerator from '../components/CertificateGenerator'
 import ResultsSkeleton from '../components/skeletons/ResultsSkeleton'
 import { loadResultsPageData, invalidateUserCache } from '../store/userStore'
 import { invalidateApiProgressCache } from '../utils/progressHelper'
+import { syncAchievements } from '../utils/achievementsHelper'
 import { unlockCertificate } from '../utils/levelHelper'
 import { getRiskLevelColors } from '../utils/quizHelper'
 import { sanitizeTopicList } from '../utils/progressHelper'
@@ -68,6 +69,12 @@ function Results() {
         setResultsData(data)
         setAllHistory(data.allHistory || [])
         setChartData(data.chartData || [])
+        
+        // Sincronizar logros pendientes si el programa está completo
+        if (data.programComplete) {
+          console.log('[SYNC] Program complete detected, syncing achievements')
+          await syncAchievements()
+        }
       }
       setIsLoading(false)
     }
