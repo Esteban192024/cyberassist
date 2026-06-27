@@ -105,8 +105,8 @@ export const generateCertificatePDF = async (
   pdf.text('Plataforma de Concientizacion en Ciberseguridad', 35, 20)
 
   pdf.setFontSize(9)
-  pdf.text('Universidad Nacional de Chimborazo', pageWidth - 16, 14, { align: 'right' })
-  pdf.text('Facultad de Ciencias', pageWidth - 16, 20, { align: 'right' })
+  pdf.text('Universidad Nacional de Chimborazo', pageWidth - 30, 14, { align: 'right' })
+  pdf.text('Facultad de Ingeniería', pageWidth - 30, 20, { align: 'right' })
 
   pdf.setTextColor(...BRAND.primary)
   pdf.setFontSize(28)

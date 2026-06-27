@@ -90,11 +90,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (updatedUserData) => {
+    const newUser = { ...user, ...updatedUserData };
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
+    setUser(newUser);
+    invalidateUserCache(); // Invalidate user store cache to refresh stats
+  };
+
   const value = {
     user,
     login,
     register,
     logout,
+    updateUser,
     loading,
     isAuthenticated: !!user
   };

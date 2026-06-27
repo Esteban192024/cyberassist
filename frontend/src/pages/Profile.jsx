@@ -29,7 +29,7 @@ import ProfileSkeleton from '../components/skeletons/ProfileSkeleton'
 function Profile() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [editForm, setEditForm] = useState({ nombre: '', email: '' })
@@ -154,12 +154,18 @@ function Profile() {
     try {
       await userAPI.updateProfile({ nombre: editForm.nombre })
       
-      // Actualizar currentUser en localStorage
-      const updatedCurrentUser = { ...currentUser, nombre: editForm.nombre }
-      localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser))
+      // Actualizar el estado global del usuario
+      updateUser({ nombre: editForm.nombre })
 
       setIsEditing(false)
       showNotification('Perfil actualizado correctamente', 'success')
+      
+      // Recargar stats para reflejar cambios
+      const loadStats = async () => {
+        const data = await getDashboardStats()
+        if (data) setStats(data)
+      }
+      loadStats()
     } catch (error) {
       console.error('Error updating profile:', error)
       showNotification(error.response?.data?.error || 'Error al actualizar perfil', 'error')
