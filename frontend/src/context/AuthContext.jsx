@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import { fetchUserProgress } from '../utils/progressHelper';
 
 const AuthContext = createContext(null);
 
@@ -14,6 +15,8 @@ export const AuthProvider = ({ children }) => {
     
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
+      // Cargar progreso desde backend para sincronización entre dispositivos
+      fetchUserProgress();
     }
     setLoading(false);
   }, []);
@@ -26,6 +29,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('currentUser', JSON.stringify(userData));
       setUser(userData);
+      
+      // Cargar progreso desde backend para sincronización entre dispositivos
+      await fetchUserProgress();
       
       return { success: true, user: userData };
     } catch (error) {
@@ -45,6 +51,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       localStorage.setItem('currentUser', JSON.stringify(userData));
       setUser(userData);
+      
+      // Cargar progreso desde backend para sincronización entre dispositivos
+      await fetchUserProgress();
       
       return { success: true, user: userData };
     } catch (error) {
