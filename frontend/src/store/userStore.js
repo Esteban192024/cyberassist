@@ -13,7 +13,7 @@ import {
   getUnlockedAchievements,
   getAllAchievements,
 } from '../utils/achievementsHelper'
-import { getLearningProgress, sanitizeTopicList, getCachedProgress } from '../utils/progressHelper'
+import { getLearningProgress, sanitizeTopicList, getCachedProgress, fetchUserProgress } from '../utils/progressHelper'
 import { getUserActivities } from '../utils/activityHelper'
 import { diagnosticAPI, simulationAPI, certificateAPI } from '../services/api'
 
@@ -44,6 +44,11 @@ export const getUserData = async () => {
   if (!currentUser) return null
 
   const userId = currentUser.id
+
+  // First fetch the latest user progress from PostgreSQL - ALWAYS!
+  console.log('[DEBUG] getUserData - Calling fetchUserProgress() first')
+  await fetchUserProgress()
+  console.log('[DEBUG] getUserData - fetchUserProgress() complete, apiProgressCache now:', getCachedProgress())
 
   // Verificar cache
   const now = Date.now()
