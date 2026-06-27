@@ -264,10 +264,12 @@ export function getDiagnosticProgress(userId) {
 }
 
 export function getSimulationProgress(userId) {
+  console.log('[DEBUG] getSimulationProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
   // Primero intentar usar el cache de la API
   if (apiProgressCache) {
     const mastered = apiProgressCache.simulationMastered || 0
     const total = apiProgressCache.simulationTotal || TOTAL_SIMULATION_ITEMS
+    console.log('[DEBUG] getSimulationProgress - USING apiProgressCache:', { mastered, total, source: 'apiProgressCache' })
     return {
       mastered,
       total,
@@ -280,6 +282,7 @@ export function getSimulationProgress(userId) {
   // Fallback a localStorage
   const mastered = getMasteredScenarios(userId).length
   const total = TOTAL_SIMULATION_ITEMS
+  console.log('[DEBUG] getSimulationProgress - USING localStorage:', { mastered, total, source: 'localStorage' })
   return {
     mastered,
     total,
@@ -377,6 +380,7 @@ export function getLearningProgress(userId) {
     diagnosticMastered: diagnostic.mastered,
     diagnosticSource: apiProgressCache ? 'apiProgressCache' : 'localStorage',
     simulationMastered: simulation.mastered,
+    simulationSource: apiProgressCache ? 'apiProgressCache' : 'localStorage',
     programComplete: diagnostic.complete && simulation.complete
   })
 
