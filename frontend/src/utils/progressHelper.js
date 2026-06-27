@@ -89,45 +89,10 @@ export async function fetchUserProgress(profileData = null) {
     return apiProgressCache
   }
 
-  if (apiProgressCache) {
-    console.log('[PROGRESS FETCH] 6. apiProgressCache EXISTE, combinando con loadedProgress')
-    console.log('[PROGRESS FETCH] 7. apiProgressCache ANTES de combinar:', JSON.stringify(apiProgressCache, null, 2))
-    apiProgressCache = {
-      diagnosticMasteredIds: Array.from(
-        new Set([
-          ...(apiProgressCache.diagnosticMasteredIds || []),
-          ...(loadedProgress.diagnosticMasteredIds || []),
-        ])
-      ),
-      simulationMasteredIds: Array.from(
-        new Set([
-          ...(apiProgressCache.simulationMasteredIds || []),
-          ...(loadedProgress.simulationMasteredIds || []),
-        ])
-      ),
-      diagnosticMastered: Math.max(
-        apiProgressCache.diagnosticMastered || 0,
-        loadedProgress.diagnosticMastered || 0
-      ),
-      simulationMastered: Math.max(
-        apiProgressCache.simulationMastered || 0,
-        loadedProgress.simulationMastered || 0
-      ),
-      diagnosticTotal: loadedProgress.diagnosticTotal || apiProgressCache.diagnosticTotal || TOTAL_DIAGNOSTIC_ITEMS,
-      simulationTotal: loadedProgress.simulationTotal || apiProgressCache.simulationTotal || TOTAL_SIMULATION_ITEMS,
-      topicLearning: {
-        ...(loadedProgress.topicLearning || {}),
-        ...(apiProgressCache.topicLearning || {}),
-      },
-      programComplete: loadedProgress.programComplete || apiProgressCache.programComplete || false,
-    }
-    console.log('[PROGRESS FETCH] 8. apiProgressCache DESPUÉS de combinar:', JSON.stringify(apiProgressCache, null, 2))
-  } else {
-    console.log('[PROGRESS FETCH] 9. NO hay apiProgressCache, usando loadedProgress:', JSON.stringify(loadedProgress, null, 2))
-    apiProgressCache = loadedProgress
-  }
-
-  console.log('[PROGRESS FETCH] 10. apiProgressCache final:', JSON.stringify(apiProgressCache, null, 2))
+  // REPLACE apiProgressCache COMPLETELY with loadedProgress - PostgreSQL is single source of truth!
+  console.log('[PROGRESS FETCH] 6. Replacing apiProgressCache with loadedProgress:', JSON.stringify(loadedProgress, null, 2))
+  apiProgressCache = loadedProgress
+  console.log('[PROGRESS FETCH] 7. apiProgressCache final:', JSON.stringify(apiProgressCache, null, 2))
   return apiProgressCache
 }
 

@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
-import { fetchUserProgress } from '../utils/progressHelper';
+import { fetchUserProgress, invalidateUserProgressCache } from '../utils/progressHelper';
+import { invalidateUserCache } from '../store/userStore';
 
 const AuthContext = createContext(null);
 
@@ -29,6 +30,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      // Invalidate ALL caches before logging in new user
+      invalidateUserCache();
+      invalidateUserProgressCache();
+      
       const response = await authAPI.login({ email, password });
       const { user: userData, token } = response.data;
       
@@ -51,6 +56,10 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, nombre) => {
     try {
+      // Invalidate ALL caches before registering new user
+      invalidateUserCache();
+      invalidateUserProgressCache();
+      
       const response = await authAPI.register({ email, password, nombre });
       const { user: userData, token } = response.data;
       
@@ -72,6 +81,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Invalidate ALL caches when logging out
+    invalidateUserCache();
+    invalidateUserProgressCache();
+    
     localStorage.removeItem('token');
     localStorage.removeItem('currentUser');
     setUser(null);
