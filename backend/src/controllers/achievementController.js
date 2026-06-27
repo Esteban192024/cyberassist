@@ -169,6 +169,11 @@ export const getAchievements = async (req, res) => {
 
 export const unlockAchievement = async (req, res) => {
   try {
+    // === LOG TEMPORAL PARA VERIFICAR DESPLIEGUE ===
+    console.log('[ACHIEVEMENT DEPLOY CHECK] ======== NUEVA VERSIÓN CON VALIDACIÓN ACTIVA ========');
+    console.log('[ACHIEVEMENT DEPLOY CHECK] Este log solo aparece si el commit 92fdf9f o posterior está desplegado');
+    // ===============================================
+
     const { code } = req.body;
     const userId = req.user.userId;
 
