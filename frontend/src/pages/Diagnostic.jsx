@@ -76,13 +76,20 @@ function Diagnostic() {
   const allDiagnosticsComplete = masteredCount >= TOTAL_DIAGNOSTIC_ITEMS
 
   const handleSelectAnswer = (option) => {
-    if (isLocked || !currentQuestion || !userId) return
+    console.log('[DIAGNOSTIC ANSWER] 1. handleSelectAnswer called with option:', option)
+    if (isLocked || !currentQuestion || !userId) {
+      console.log('[DIAGNOSTIC ANSWER] 2. Retornando porque:', { isLocked, hasCurrentQuestion: !!currentQuestion, hasUserId: !!userId })
+      return
+    }
 
     const masteredBefore = getMasteredQuestions().length
+    console.log('[DIAGNOSTIC ANSWER] 3. masteredBefore:', masteredBefore)
     setSelectedAnswer(option)
     setIsLocked(true)
 
     const isCorrect = option === currentQuestion.correctAnswer
+    console.log('[DIAGNOSTIC ANSWER] 4. currentQuestion:', currentQuestion)
+    console.log('[DIAGNOSTIC ANSWER] 5. isCorrect:', isCorrect, '(correctAnswer:', currentQuestion.correctAnswer, 'selectedAnswer:', option, ')')
     recordTopicAttempt(userId, currentQuestion.topic, isCorrect)
 
     console.log('[DIAGNOSTIC] Question answered', {
@@ -93,10 +100,14 @@ function Diagnostic() {
     })
 
     if (isCorrect) {
+      console.log('[DIAGNOSTIC ANSWER] 6. Respuesta correcta, llamando a markQuestionMastered')
       const isNewMaster = markQuestionMastered(userId, currentQuestion.id)
       if (isNewMaster) {
+        console.log('[DIAGNOSTIC ANSWER] 7. Nueva pregunta dominada, incrementando masteredCount y addXP')
         setMasteredCount((prev) => prev + 1)
         addXP('question', `question_${currentQuestion.id}`)
+      } else {
+        console.log('[DIAGNOSTIC ANSWER] 7. Pregunta ya era dominada, no hacemos nada')
       }
     }
 
@@ -150,11 +161,18 @@ function Diagnostic() {
       })
 
     const masteredQuestionIds = getMasteredQuestions()
+    const topicLearningStats = getTopicLearningStats()
+
+    console.log('[DIAGNOSTIC FINISH] 1. INICIO');
+    console.log('[DIAGNOSTIC FINISH] 2. masteredQuestionIds:', JSON.stringify(masteredQuestionIds, null, 2));
+    console.log('[DIAGNOSTIC FINISH] 3. masteredQuestionIds.length:', masteredQuestionIds.length);
+    console.log('[DIAGNOSTIC FINISH] 4. masteredCount:', masteredCount);
+    console.log('[DIAGNOSTIC FINISH] 5. topicLearningStats:', JSON.stringify(topicLearningStats, null, 2));
 
     // Guardar en la base de datos
     if (userId) {
       try {
-        await diagnosticAPI.create({
+        const apiPayload = {
           score: correctCount,
           total: totalSession,
           masteredTotal: masteredCount,
@@ -165,8 +183,13 @@ function Diagnostic() {
           personalizedRecommendations,
           generalRecommendations,
           diagnosticMasteredIds: masteredQuestionIds,
-          topicLearning: getTopicLearningStats(),
-        })
+          topicLearning: topicLearningStats,
+        }
+
+        console.log('[DIAGNOSTIC FINISH] 6. Llamando a diagnosticAPI.create() con payload:', JSON.stringify(apiPayload, null, 2));
+
+        const response = await diagnosticAPI.create(apiPayload)
+        console.log('[DIAGNOSTIC FINISH] 7. Respuesta de diagnosticAPI.create():', response);
 
         console.log('[DIAGNOSTIC] Session completed', {
           score: correctCount,
@@ -176,9 +199,11 @@ function Diagnostic() {
         })
 
         await fetchUserProgress()
-        setMasteredCount(getDiagnosticProgress().mastered)
+        const newMasteredCount = getDiagnosticProgress().mastered
+        console.log('[DIAGNOSTIC FINISH] 8. Después de fetchUserProgress, newMasteredCount:', newMasteredCount);
+        setMasteredCount(newMasteredCount)
       } catch (error) {
-        console.error('Error saving diagnostic to database:', error)
+        console.error('[DIAGNOSTIC FINISH] ERROR en diagnosticAPI.create():', error)
         throw error
       }
     }

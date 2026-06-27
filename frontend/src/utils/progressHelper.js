@@ -65,23 +65,33 @@ export const invalidateUserProgressCache = () => {
 export const getCachedProgress = () => apiProgressCache
 
 export async function fetchUserProgress(profileData = null) {
+  console.log('[PROGRESS FETCH] 1. INICIO - profileData provided:', !!profileData)
   let loadedProgress
 
   if (profileData?.userProgress) {
+    console.log('[PROGRESS FETCH] 2. Usando userProgress desde profileData:', JSON.stringify(profileData.userProgress, null, 2))
     loadedProgress = profileData.userProgress
   } else {
     try {
+      console.log('[PROGRESS FETCH] 2. Llamando a userAPI.getProfile()')
       const response = await userAPI.getProfile()
+      console.log('[PROGRESS FETCH] 3. Respuesta de userAPI.getProfile():', JSON.stringify(response.data, null, 2))
       loadedProgress = response.data?.userProgress || null
+      console.log('[PROGRESS FETCH] 4. loadedProgress desde API:', JSON.stringify(loadedProgress, null, 2))
     } catch (error) {
-      console.error('[PROGRESS] Error fetching user progress:', error)
+      console.error('[PROGRESS FETCH] ERROR:', error)
       return apiProgressCache
     }
   }
 
-  if (!loadedProgress) return apiProgressCache
+  if (!loadedProgress) {
+    console.log('[PROGRESS FETCH] 5. NO hay loadedProgress, retornando apiProgressCache:', JSON.stringify(apiProgressCache, null, 2))
+    return apiProgressCache
+  }
 
   if (apiProgressCache) {
+    console.log('[PROGRESS FETCH] 6. apiProgressCache EXISTE, combinando con loadedProgress')
+    console.log('[PROGRESS FETCH] 7. apiProgressCache ANTES de combinar:', JSON.stringify(apiProgressCache, null, 2))
     apiProgressCache = {
       diagnosticMasteredIds: Array.from(
         new Set([
@@ -111,10 +121,13 @@ export async function fetchUserProgress(profileData = null) {
       },
       programComplete: loadedProgress.programComplete || apiProgressCache.programComplete || false,
     }
+    console.log('[PROGRESS FETCH] 8. apiProgressCache DESPUÉS de combinar:', JSON.stringify(apiProgressCache, null, 2))
   } else {
+    console.log('[PROGRESS FETCH] 9. NO hay apiProgressCache, usando loadedProgress:', JSON.stringify(loadedProgress, null, 2))
     apiProgressCache = loadedProgress
   }
 
+  console.log('[PROGRESS FETCH] 10. apiProgressCache final:', JSON.stringify(apiProgressCache, null, 2))
   return apiProgressCache
 }
 
@@ -147,7 +160,9 @@ export function getSimulationBank() {
 }
 
 export function getMasteredQuestions() {
-  return apiProgressCache?.diagnosticMasteredIds || []
+  const result = apiProgressCache?.diagnosticMasteredIds || []
+  console.log('[PROGRESS GET] getMasteredQuestions() called, returning:', JSON.stringify(result, null, 2))
+  return result
 }
 
 export function getMasteredScenarios() {
@@ -155,9 +170,11 @@ export function getMasteredScenarios() {
 }
 
 export function markQuestionMastered(userId, questionId) {
+  console.log('[PROGRESS MARK] markQuestionMastered called for questionId:', questionId)
   if (!questionId) return false
 
   if (!apiProgressCache) {
+    console.log('[PROGRESS MARK] apiProgressCache is null, initializing it')
     apiProgressCache = {
       diagnosticMasteredIds: [],
       simulationMasteredIds: [],
@@ -168,11 +185,17 @@ export function markQuestionMastered(userId, questionId) {
   }
 
   const masteredIds = getMasteredQuestions()
-  if (masteredIds.includes(questionId)) return false
+  console.log('[PROGRESS MARK] masteredIds antes de agregar:', JSON.stringify(masteredIds, null, 2))
+  if (masteredIds.includes(questionId)) {
+    console.log('[PROGRESS MARK] questionId ya está en masteredIds, retornando false')
+    return false
+  }
 
   const updatedIds = Array.from(new Set([...masteredIds, questionId]))
   apiProgressCache.diagnosticMasteredIds = updatedIds
   apiProgressCache.diagnosticMastered = updatedIds.length
+
+  console.log('[PROGRESS MARK] apiProgressCache después de actualizar:', JSON.stringify(apiProgressCache, null, 2))
 
   return true
 }

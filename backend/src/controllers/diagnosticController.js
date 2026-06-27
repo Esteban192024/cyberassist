@@ -18,13 +18,21 @@ export const createDiagnostic = async (req, res) => {
       topicLearning,
     } = req.body;
 
-    console.log('[DIAGNOSTIC SAVE] Origen: Frontend, Endpoint: POST /diagnostics, userId:', userId, 'topicLearning recibido:', topicLearning);
+    console.log('[DIAGNOSTIC SAVE] 1. INICIO - userId:', userId);
+    console.log('[DIAGNOSTIC SAVE] 2. Datos recibidos de frontend:', {
+      masteredTotal,
+      diagnosticMasteredIds: JSON.stringify(diagnosticMasteredIds, null, 2),
+      diagnosticMasteredIdsLength: diagnosticMasteredIds?.length,
+      masteredQuestionIdsLength: masteredQuestionIds?.length,
+    });
 
     const diagnosticMasteredIdsToSave = Array.isArray(diagnosticMasteredIds)
       ? diagnosticMasteredIds
       : Array.isArray(masteredQuestionIds)
       ? masteredQuestionIds
       : null;
+
+    console.log('[DIAGNOSTIC SAVE] 3. diagnosticMasteredIdsToSave:', JSON.stringify(diagnosticMasteredIdsToSave, null, 2));
 
     // Crear registro de diagnóstico
     const diagnostic = await prisma.diagnostic.create({
@@ -42,7 +50,7 @@ export const createDiagnostic = async (req, res) => {
       },
     });
 
-    console.log('[DIAGNOSTIC SAVE] Diagnóstico guardado en PostgreSQL, id:', diagnostic.id);
+    console.log('[DIAGNOSTIC SAVE] 4. Diagnóstico creado en PostgreSQL, id:', diagnostic.id);
 
     // Actualizar UserProgress
     const userProgress = await prisma.userProgress.findUnique({
@@ -50,25 +58,47 @@ export const createDiagnostic = async (req, res) => {
     });
 
     if (userProgress) {
-      console.log('[USER PROGRESS UPDATE] Actualizando UserProgress para userId:', userId);
+      console.log('[USER PROGRESS UPDATE] 5. UserProgress actual ANTES de guardar:', {
+        userId,
+        diagnosticMastered: userProgress.diagnosticMastered,
+        diagnosticMasteredIds: JSON.stringify(userProgress.diagnosticMasteredIds, null, 2),
+        diagnosticMasteredIdsLength: userProgress.diagnosticMasteredIds?.length,
+        topicLearning: userProgress.topicLearning,
+      });
       
+      const newDiagnosticMasteredIds = diagnosticMasteredIdsToSave
+        ? Array.from(new Set([...userProgress.diagnosticMasteredIds, ...diagnosticMasteredIdsToSave]))
+        : userProgress.diagnosticMasteredIds;
+
+      const newDiagnosticMasteredCount = Math.max(userProgress.diagnosticMastered, masteredTotal);
+
+      console.log('[USER PROGRESS UPDATE] 6. Datos a guardar en UserProgress:', {
+        newDiagnosticMasteredCount,
+        newDiagnosticMasteredIds: JSON.stringify(newDiagnosticMasteredIds, null, 2),
+        newDiagnosticMasteredIdsLength: newDiagnosticMasteredIds?.length,
+      });
+
       const updatedUserProgress = await prisma.userProgress.update({
         where: { userId },
         data: {
-          diagnosticMastered: Math.max(userProgress.diagnosticMastered, masteredTotal),
+          diagnosticMastered: newDiagnosticMasteredCount,
           diagnosticTotal: masteredGoal,
-          diagnosticMasteredIds: diagnosticMasteredIdsToSave
-            ? Array.from(new Set([...userProgress.diagnosticMasteredIds, ...diagnosticMasteredIdsToSave]))
-            : userProgress.diagnosticMasteredIds,
+          diagnosticMasteredIds: newDiagnosticMasteredIds,
           topicLearning: topicLearning || userProgress.topicLearning,
           programComplete:
-            Math.max(userProgress.diagnosticMastered, masteredTotal) >= masteredGoal &&
+            newDiagnosticMasteredCount >= masteredGoal &&
             userProgress.simulationMastered >= userProgress.simulationTotal,
         },
       });
 
-      console.log('[TOPIC LEARNING UPDATE] topicLearning actualizado en UserProgress:', updatedUserProgress.topicLearning);
-      console.log('[USER PROGRESS UPDATE] UserProgress actualizado exitosamente para userId:', userId);
+      console.log('[USER PROGRESS UPDATE] 7. UserProgress DESPUÉS de guardar:', {
+        userId,
+        diagnosticMastered: updatedUserProgress.diagnosticMastered,
+        diagnosticMasteredIds: JSON.stringify(updatedUserProgress.diagnosticMasteredIds, null, 2),
+        diagnosticMasteredIdsLength: updatedUserProgress.diagnosticMasteredIds?.length,
+        topicLearning: updatedUserProgress.topicLearning,
+        programComplete: updatedUserProgress.programComplete,
+      });
     }
 
     res.status(201).json({
@@ -76,7 +106,7 @@ export const createDiagnostic = async (req, res) => {
       diagnostic,
     });
   } catch (error) {
-    console.error('Create diagnostic error:', error);
+    console.error('[DIAGNOSTIC SAVE] ERROR:', error);
     res.status(500).json({ error: 'Failed to save diagnostic' });
   }
 };
