@@ -35,6 +35,7 @@ model Diagnostic {
   masteredTotal               Int
   masteredGoal                Int
   riskLevel                   String
+  date                        DateTime @default(now())
   strengths                   String[]
   weaknesses                  String[]
   personalizedRecommendations Json?
@@ -43,7 +44,7 @@ model Diagnostic {
   user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([createdAt])
+  @@index([date])
 }
 
 model Simulation {
@@ -54,13 +55,14 @@ model Simulation {
   masteredTotal Int
   masteredGoal  Int
   riskLevel     String
+  date          DateTime @default(now())
   strengths     String[]
   weaknesses    String[]
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([createdAt])
+  @@index([date])
 }
 
 model Achievement {
@@ -118,17 +120,24 @@ model ActivityLog {
 }
 
 model UserProgress {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  diagnosticMastered Int      @default(0)
-  diagnosticTotal    Int      @default(15)
-  simulationMastered Int      @default(0)
-  simulationTotal    Int      @default(15)
-  programComplete    Boolean  @default(false)
-  topicLearning      Json
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @unique
+
+  diagnosticMastered    Int      @default(0)
+  diagnosticMasteredIds String[] @default([])
+
+  diagnosticTotal Int @default(15)
+
+  simulationMastered    Int      @default(0)
+  simulationMasteredIds String[] @default([])
+
+  simulationTotal Int @default(15)
+
+  programComplete Boolean  @default(false)
+  topicLearning   Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

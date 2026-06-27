@@ -11,7 +11,15 @@ export const createSimulation = async (req, res) => {
       riskLevel,
       strengths,
       weaknesses,
+      simulationMasteredIds,
+      masteredScenarioIds,
     } = req.body;
+
+    const simulationMasteredIdsToSave = Array.isArray(simulationMasteredIds)
+      ? simulationMasteredIds
+      : Array.isArray(masteredScenarioIds)
+      ? masteredScenarioIds
+      : null;
 
     // Crear registro de simulación
     const simulation = await prisma.simulation.create({
@@ -36,11 +44,14 @@ export const createSimulation = async (req, res) => {
       await prisma.userProgress.update({
         where: { userId },
         data: {
-          simulationMastered: masteredTotal,
+          simulationMastered: Math.max(userProgress.simulationMastered, masteredTotal),
           simulationTotal: masteredGoal,
+          simulationMasteredIds: simulationMasteredIdsToSave
+            ? Array.from(new Set([...userProgress.simulationMasteredIds, ...simulationMasteredIdsToSave]))
+            : userProgress.simulationMasteredIds,
           programComplete:
             userProgress.diagnosticMastered >= userProgress.diagnosticTotal &&
-            masteredTotal >= masteredGoal,
+            Math.max(userProgress.simulationMastered, masteredTotal) >= masteredGoal,
         },
       });
     }

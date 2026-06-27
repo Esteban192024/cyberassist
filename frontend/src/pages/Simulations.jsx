@@ -255,6 +255,8 @@ function Simulations() {
     const sanitizedStrengths = sanitizeTopicList(strengths)
     const sanitizedWeaknesses = sanitizeTopicList(weaknesses)
 
+    const masteredScenarioIds = getMasteredScenarios(userId)
+
     const simulationResult = {
       id: generateUniqueId(),
       score,
@@ -280,6 +282,8 @@ function Simulations() {
           riskLevel,
           strengths: sanitizedStrengths,
           weaknesses: sanitizedWeaknesses,
+          simulationMasteredIds: masteredScenarioIds,
+          masteredScenarioIds,
         })
 
         // Actualizar el cache local

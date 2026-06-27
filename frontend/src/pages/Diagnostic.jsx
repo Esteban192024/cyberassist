@@ -146,6 +146,8 @@ function Diagnostic() {
         }
       })
 
+    const masteredQuestionIds = getMasteredQuestions(userId)
+
     const result = {
       id: generateUniqueId(),
       score: correctCount,
@@ -175,6 +177,8 @@ function Diagnostic() {
           weaknesses: sanitizedWeaknesses,
           personalizedRecommendations,
           generalRecommendations,
+          diagnosticMasteredIds: masteredQuestionIds,
+          masteredQuestionIds,
         })
 
         // Actualizar el cache local

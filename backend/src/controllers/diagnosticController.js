@@ -13,7 +13,15 @@ export const createDiagnostic = async (req, res) => {
       weaknesses,
       personalizedRecommendations,
       generalRecommendations,
+      diagnosticMasteredIds,
+      masteredQuestionIds,
     } = req.body;
+
+    const diagnosticMasteredIdsToSave = Array.isArray(diagnosticMasteredIds)
+      ? diagnosticMasteredIds
+      : Array.isArray(masteredQuestionIds)
+      ? masteredQuestionIds
+      : null;
 
     // Crear registro de diagnóstico
     const diagnostic = await prisma.diagnostic.create({
@@ -40,10 +48,13 @@ export const createDiagnostic = async (req, res) => {
       await prisma.userProgress.update({
         where: { userId },
         data: {
-          diagnosticMastered: masteredTotal,
+          diagnosticMastered: Math.max(userProgress.diagnosticMastered, masteredTotal),
           diagnosticTotal: masteredGoal,
+          diagnosticMasteredIds: diagnosticMasteredIdsToSave
+            ? Array.from(new Set([...userProgress.diagnosticMasteredIds, ...diagnosticMasteredIdsToSave]))
+            : userProgress.diagnosticMasteredIds,
           programComplete:
-            masteredTotal >= masteredGoal &&
+            Math.max(userProgress.diagnosticMastered, masteredTotal) >= masteredGoal &&
             userProgress.simulationMastered >= userProgress.simulationTotal,
         },
       });
