@@ -48,8 +48,8 @@ function Results() {
     const loadData = async () => {
       // Invalidar cache para asegurar datos frescos
       invalidateUserCache()
-      invalidateApiProgressCache()
-      
+      // invalidateApiProgressCache() - ELIMINADO: No invalidar cache de API al cargar Results
+
       console.log('[SYNC] Loading data for Results')
       setIsLoading(true)
       const start = performance.now()
@@ -69,7 +69,7 @@ function Results() {
         setResultsData(data)
         setAllHistory(data.allHistory || [])
         setChartData(data.chartData || [])
-        
+
         // Sincronizar logros pendientes si el programa está completo
         if (data.programComplete) {
           console.log('[SYNC] Program complete detected, syncing achievements')

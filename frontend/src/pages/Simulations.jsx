@@ -37,6 +37,7 @@ import {
   sanitizeTopicList,
   fetchUserProgress,
   getMasteredScenarios,
+  getCachedProgress,
 } from '../utils/progressHelper'
 import { simulationAPI } from '../services/api'
 import {
@@ -170,6 +171,7 @@ function Simulations() {
 
   useEffect(() => {
     console.log('[NAVIGATION] Enter Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString(), userId })
+    console.log('[SYNC] Simulations page loaded - apiProgressCache status:', getCachedProgress() ? 'EXISTS' : 'NULL')
     return () => {
       console.log('[NAVIGATION] Exit Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
     }

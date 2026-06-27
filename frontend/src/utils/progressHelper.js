@@ -80,24 +80,26 @@ let apiDiagnosticsCache = null
 let apiSimulationsCache = null
 
 export const invalidateApiProgressCache = () => {
+  console.log('[CACHE] invalidateApiProgressCache called - setting apiProgressCache to NULL')
   apiProgressCache = null
+  console.log('[CACHE] invalidateApiProgressCache completed - apiProgressCache is now:', apiProgressCache)
 }
 
 export async function fetchUserProgress() {
-  console.log('[DEBUG] fetchUserProgress - BEFORE apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
+  console.log('[CACHE] fetchUserProgress - BEFORE apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
   try {
     const response = await userAPI.getProfile()
     if (response.data?.userProgress) {
       apiProgressCache = response.data.userProgress
-      console.log('[DEBUG] fetchUserProgress - FULL STRUCTURE FROM BACKEND:')
+      console.log('[CACHE] fetchUserProgress - FULL STRUCTURE FROM BACKEND:')
       console.log(JSON.stringify(apiProgressCache, null, 2))
-      console.log('[DEBUG] fetchUserProgress - AFTER apiProgressCache:', { diagnosticMastered: apiProgressCache.diagnosticMastered, source: 'API' })
+      console.log('[CACHE] fetchUserProgress - AFTER apiProgressCache:', { diagnosticMastered: apiProgressCache.diagnosticMastered, simulationMastered: apiProgressCache.simulationMastered, source: 'API' })
       return response.data.userProgress
     }
   } catch (error) {
-    console.error('Error fetching user progress:', error)
+    console.error('[CACHE] Error fetching user progress:', error)
   }
-  console.log('[DEBUG] fetchUserProgress - FAILED, apiProgressCache remains:', apiProgressCache ? 'UNCHANGED' : 'NULL')
+  console.log('[CACHE] fetchUserProgress - FAILED, apiProgressCache remains:', apiProgressCache ? 'UNCHANGED' : 'NULL')
   return null
 }
 
@@ -173,7 +175,7 @@ export function markQuestionMastered(userId, questionId) {
   if (mastered.includes(questionId)) return false
   mastered.push(questionId)
   writeJson(keys.masteredQuestions(userId), mastered)
-  invalidateApiProgressCache()
+  // invalidateApiProgressCache() - ELIMINADO: No invalidar cache de API al guardar en localStorage
   console.log('[DEBUG] markQuestionMastered - AFTER:', { masteredCount: mastered.length, source: 'localStorage' })
   return true
 }
@@ -187,7 +189,7 @@ export function markScenarioMastered(userId, scenarioId) {
   if (mastered.includes(scenarioId)) return false
   mastered.push(scenarioId)
   writeJson(keys.masteredScenarios(userId), mastered)
-  invalidateApiProgressCache()
+  // invalidateApiProgressCache() - ELIMINADO: No invalidar cache de API al guardar en localStorage
   return true
 }
 

@@ -23,6 +23,7 @@ import { getDashboardStats } from '../store/userStore'
 import { useAuth } from '../context/AuthContext'
 import { userAPI } from '../services/api'
 import { syncAchievements } from '../utils/achievementsHelper'
+import { getCachedProgress } from '../utils/progressHelper'
 import ProfileSkeleton from '../components/skeletons/ProfileSkeleton'
 
 function Profile() {
@@ -41,6 +42,7 @@ function Profile() {
 
   useEffect(() => {
     console.log('[NAVIGATION] Enter Profile', { pathname: location.pathname, timestamp: new Date().toISOString(), userId: currentUser?.id })
+    console.log('[SYNC] Profile page loaded - apiProgressCache status:', getCachedProgress() ? 'EXISTS' : 'NULL')
     const loadStats = async () => {
       console.log('[SYNC] Loading data for Profile')
       setIsLoading(true)
@@ -59,7 +61,7 @@ function Profile() {
           level: data.level
         })
         setStats(data)
-        
+
         // Sincronizar logros pendientes si el programa está completo
         if (data.programComplete) {
           console.log('[SYNC] Program complete detected, syncing achievements')
