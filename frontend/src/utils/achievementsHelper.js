@@ -8,6 +8,7 @@ import {
   TOTAL_DIAGNOSTIC_ITEMS,
   TOTAL_SIMULATION_ITEMS,
   getLearningProgress,
+  invalidateApiProgressCache,
 } from './progressHelper'
 import { achievementAPI } from '../services/api'
 
@@ -37,6 +38,10 @@ function hasPerfectSimulationSession(simulationsResults) {
 async function evaluateAchievements(context = {}, { silent = false } = {}) {
   console.log('[ACHIEVEMENTS] Evaluation started', { context, silent })
   console.log('[DEBUG] checkAchievements() called with context:', context)
+  
+  // Invalidar apiProgressCache para asegurar datos frescos de localStorage
+  invalidateApiProgressCache()
+  
   const newlyUnlocked = []
   
   // Obtener logros desbloqueados del usuario desde API
