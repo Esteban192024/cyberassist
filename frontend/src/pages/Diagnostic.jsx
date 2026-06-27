@@ -39,8 +39,9 @@ function Diagnostic() {
 
   const initialProgress = getDiagnosticProgress()
   const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
-
-  const sessionQuestions = selectPendingForSession(getPendingQuestions())
+  const [sessionQuestions, setSessionQuestions] = useState(() => {
+    return selectPendingForSession(getPendingQuestions())
+  })
 
   useEffect(() => {
     if (!userId) return
@@ -200,14 +201,15 @@ function Diagnostic() {
 
   const handleContinuePractice = async () => {
     // Reiniciar el estado local para cargar nuevas preguntas pendientes
+    await fetchUserProgress()
+    const newPending = getPendingQuestions()
+    setSessionQuestions(selectPendingForSession(newPending))
     setCurrentIndex(0)
     setSelectedAnswer(null)
     setIsLocked(false)
     setSessionAnswers([])
     setSessionComplete(false)
     setIsSubmitting(false)
-    
-    await fetchUserProgress()
     setMasteredCount(getDiagnosticProgress().mastered)
   }
 

@@ -177,6 +177,9 @@ function Simulations() {
 
   const initialProgress = getSimulationProgress()
   const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
+  const [sessionScenarios, setSessionScenarios] = useState(() => {
+    return selectPendingForSession(getPendingScenarios())
+  })
 
   useEffect(() => {
     if (!userId) return
@@ -194,7 +197,6 @@ function Simulations() {
     }
   }, [userId])
 
-  const sessionScenarios = selectPendingForSession(getPendingScenarios())
   const [currentSimulation, setCurrentSimulation] = useState(0)
   const [score, setScore] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
@@ -308,6 +310,8 @@ function Simulations() {
   const handleBackToDashboard = () => navigate('/student')
   const handleRestart = async () => {
     await fetchUserProgress()
+    const newPending = getPendingScenarios()
+    setSessionScenarios(selectPendingForSession(newPending))
     setMasteredCount(getSimulationProgress().mastered)
     setCurrentSimulation(0)
     setSelectedAnswer(null)
