@@ -20,6 +20,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import CertificateGenerator from '../components/CertificateGenerator'
 import ResultsSkeleton from '../components/skeletons/ResultsSkeleton'
 import { loadResultsPageData, invalidateUserCache } from '../store/userStore'
+import { invalidateApiProgressCache } from '../utils/progressHelper'
 import { unlockCertificate } from '../utils/levelHelper'
 import { getRiskLevelColors } from '../utils/quizHelper'
 import { sanitizeTopicList } from '../utils/progressHelper'
@@ -46,6 +47,7 @@ function Results() {
     const loadData = async () => {
       // Invalidar cache para asegurar datos frescos
       invalidateUserCache()
+      invalidateApiProgressCache()
       
       console.log('[SYNC] Loading data for Results')
       setIsLoading(true)
