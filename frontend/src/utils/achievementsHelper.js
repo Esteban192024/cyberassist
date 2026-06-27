@@ -60,10 +60,10 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
 
   const results = [] // Se obtendrán desde API en el futuro
   const simulationsResults = [] // Se obtendrán desde API en el futuro
-  const userProgress = JSON.parse(localStorage.getItem(`userProgress_${userId}`)) || { level: 1 }
-  const masteredQuestions = getMasteredQuestions(userId)
-  const masteredScenarios = getMasteredScenarios(userId)
-  const learning = getLearningProgress(userId)
+  const userProgress = getUserLevelData() || { level: 1 }
+  const masteredQuestions = getMasteredQuestions()
+  const masteredScenarios = getMasteredScenarios()
+  const learning = getLearningProgress()
 
   const perfectDiagnosticSession =
     (context.type === 'diagnostic' && context.score === context.total && context.total > 0) ||

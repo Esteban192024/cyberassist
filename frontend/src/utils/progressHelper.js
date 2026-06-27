@@ -56,57 +56,71 @@ export function sanitizeTopicList(topics) {
   return result
 }
 
-const keys = {
-  masteredQuestions: (userId) => `masteredQuestions_${userId}`,
-  masteredScenarios: (userId) => `masteredScenarios_${userId}`,
-  topicLearning: (userId) => `topicLearning_${userId}`,
-}
-
-function readJson(key, fallback) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) ?? fallback
-  } catch {
-    return fallback
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
-}
-
-// Cache para datos de la API
 let apiProgressCache = null
-let apiDiagnosticsCache = null
-let apiSimulationsCache = null
 
-export const invalidateApiProgressCache = () => {
-  console.log('[CACHE] invalidateApiProgressCache called - setting apiProgressCache to NULL')
+export const invalidateUserProgressCache = () => {
   apiProgressCache = null
-  console.log('[CACHE] invalidateApiProgressCache completed - apiProgressCache is now:', apiProgressCache)
 }
 
-export async function fetchUserProgress() {
-  console.log('[CACHE] fetchUserProgress - BEFORE apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
-  try {
-    const response = await userAPI.getProfile()
-    if (response.data?.userProgress) {
-      apiProgressCache = response.data.userProgress
-      console.log('[CACHE] fetchUserProgress - FULL STRUCTURE FROM BACKEND:')
-      console.log(JSON.stringify(apiProgressCache, null, 2))
-      console.log('[CACHE] fetchUserProgress - AFTER apiProgressCache:', { diagnosticMastered: apiProgressCache.diagnosticMastered, simulationMastered: apiProgressCache.simulationMastered, source: 'API' })
-      return response.data.userProgress
+export const getCachedProgress = () => apiProgressCache
+
+export async function fetchUserProgress(profileData = null) {
+  let loadedProgress = null
+
+  if (profileData?.userProgress) {
+    loadedProgress = profileData.userProgress
+  } else {
+    try {
+      const response = await userAPI.getProfile()
+      loadedProgress = response.data?.userProgress || null
+    } catch (error) {
+      console.error('[PROGRESS] Error fetching user progress:', error)
+      return apiProgressCache
     }
-  } catch (error) {
-    console.error('[CACHE] Error fetching user progress:', error)
   }
-  console.log('[CACHE] fetchUserProgress - FAILED, apiProgressCache remains:', apiProgressCache ? 'UNCHANGED' : 'NULL')
-  return null
+
+  if (!loadedProgress) return apiProgressCache
+
+  if (apiProgressCache) {
+    apiProgressCache = {
+      diagnosticMasteredIds: Array.from(
+        new Set([
+          ...(apiProgressCache.diagnosticMasteredIds || []),
+          ...(loadedProgress.diagnosticMasteredIds || []),
+        ])
+      ),
+      simulationMasteredIds: Array.from(
+        new Set([
+          ...(apiProgressCache.simulationMasteredIds || []),
+          ...(loadedProgress.simulationMasteredIds || []),
+        ])
+      ),
+      diagnosticMastered: Math.max(
+        apiProgressCache.diagnosticMastered || 0,
+        loadedProgress.diagnosticMastered || 0
+      ),
+      simulationMastered: Math.max(
+        apiProgressCache.simulationMastered || 0,
+        loadedProgress.simulationMastered || 0
+      ),
+      diagnosticTotal: loadedProgress.diagnosticTotal || apiProgressCache.diagnosticTotal || TOTAL_DIAGNOSTIC_ITEMS,
+      simulationTotal: loadedProgress.simulationTotal || apiProgressCache.simulationTotal || TOTAL_SIMULATION_ITEMS,
+      topicLearning: {
+        ...(loadedProgress.topicLearning || {}),
+        ...(apiProgressCache.topicLearning || {}),
+      },
+      programComplete: loadedProgress.programComplete || apiProgressCache.programComplete || false,
+    }
+  } else {
+    apiProgressCache = loadedProgress
+  }
+
+  return apiProgressCache
 }
 
 export async function fetchDiagnostics() {
   try {
     const response = await diagnosticAPI.getAll()
-    apiDiagnosticsCache = response.data || []
     return response.data || []
   } catch (error) {
     console.error('Error fetching diagnostics:', error)
@@ -117,7 +131,6 @@ export async function fetchDiagnostics() {
 export async function fetchSimulations() {
   try {
     const response = await simulationAPI.getAll()
-    apiSimulationsCache = response.data || []
     return response.data || []
   } catch (error) {
     console.error('Error fetching simulations:', error)
@@ -125,139 +138,140 @@ export async function fetchSimulations() {
   }
 }
 
-export function getCachedProgress() {
-  return apiProgressCache
-}
-
-export function getCachedDiagnostics() {
-  return apiDiagnosticsCache || []
-}
-
-export function getCachedSimulations() {
-  return apiSimulationsCache || []
-}
-
-/** Banco oficial de 15 preguntas de diagnóstico */
 export function getDiagnosticBank() {
   return filterValidQuestions(DIAGNOSTIC_QUESTIONS).slice(0, TOTAL_DIAGNOSTIC_ITEMS)
 }
 
-/** Banco oficial de 15 escenarios de simulación */
 export function getSimulationBank() {
   return filterValidScenarios(SIMULATION_SCENARIOS).slice(0, TOTAL_SIMULATION_ITEMS)
 }
 
-export function getMasteredQuestions(userId) {
-  if (!userId) return []
-  return readJson(keys.masteredQuestions(userId), [])
+export function getMasteredQuestions() {
+  return apiProgressCache?.diagnosticMasteredIds || []
 }
 
-export function getMasteredScenarios(userId) {
-  if (!userId) return []
-  return readJson(keys.masteredScenarios(userId), [])
+export function getMasteredScenarios() {
+  return apiProgressCache?.simulationMasteredIds || []
 }
 
-export function isQuestionMastered(userId, questionId) {
-  return getMasteredQuestions(userId).includes(questionId)
-}
-
-export function isScenarioMastered(userId, scenarioId) {
-  return getMasteredScenarios(userId).includes(scenarioId)
-}
-
-/**
- * Marca pregunta como dominada. Retorna true si es la primera vez.
- */
 export function markQuestionMastered(userId, questionId) {
-  if (!userId || !questionId) return false
-  const mastered = getMasteredQuestions(userId)
-  console.log('[DEBUG] markQuestionMastered - BEFORE:', { masteredCount: mastered.length, source: 'localStorage' })
-  if (mastered.includes(questionId)) return false
-  mastered.push(questionId)
-  writeJson(keys.masteredQuestions(userId), mastered)
-  // invalidateApiProgressCache() - ELIMINADO: No invalidar cache de API al guardar en localStorage
-  console.log('[DEBUG] markQuestionMastered - AFTER:', { masteredCount: mastered.length, source: 'localStorage' })
+  if (!questionId) return false
+
+  if (!apiProgressCache) {
+    apiProgressCache = {
+      diagnosticMasteredIds: [],
+      simulationMasteredIds: [],
+      topicLearning: {},
+      diagnosticMastered: 0,
+      simulationMastered: 0,
+    }
+  }
+
+  const masteredIds = getMasteredQuestions()
+  if (masteredIds.includes(questionId)) return false
+
+  const updatedIds = Array.from(new Set([...masteredIds, questionId]))
+  apiProgressCache.diagnosticMasteredIds = updatedIds
+  apiProgressCache.diagnosticMastered = updatedIds.length
+
   return true
 }
 
-/**
- * Marca escenario como dominado. Retorna true si es la primera vez.
- */
 export function markScenarioMastered(userId, scenarioId) {
-  if (!userId || !scenarioId) return false
-  const mastered = getMasteredScenarios(userId)
-  if (mastered.includes(scenarioId)) return false
-  mastered.push(scenarioId)
-  writeJson(keys.masteredScenarios(userId), mastered)
-  // invalidateApiProgressCache() - ELIMINADO: No invalidar cache de API al guardar en localStorage
+  if (!scenarioId) return false
+
+  if (!apiProgressCache) {
+    apiProgressCache = {
+      diagnosticMasteredIds: [],
+      simulationMasteredIds: [],
+      topicLearning: {},
+      diagnosticMastered: 0,
+      simulationMastered: 0,
+    }
+  }
+
+  const masteredIds = getMasteredScenarios()
+  if (masteredIds.includes(scenarioId)) return false
+
+  const updatedIds = Array.from(new Set([...masteredIds, scenarioId]))
+  apiProgressCache.simulationMasteredIds = updatedIds
+  apiProgressCache.simulationMastered = updatedIds.length
+
   return true
 }
 
-export function getTopicLearningStats(userId) {
-  // Primero intentar usar el cache de la API
-  if (apiProgressCache?.topicLearning) {
-    return apiProgressCache.topicLearning
+export function recordTopicAttempt(userId, topic, isCorrect) {
+  if (!topic || typeof isCorrect !== 'boolean') return
+
+  if (!apiProgressCache) {
+    apiProgressCache = {
+      diagnosticMasteredIds: [],
+      simulationMasteredIds: [],
+      topicLearning: {},
+      diagnosticMastered: 0,
+      simulationMastered: 0,
+    }
   }
 
-  // Fallback a localStorage
-  if (!userId) return {}
-  return readJson(keys.topicLearning(userId), {})
-}
+  const topicLearning = apiProgressCache.topicLearning || {}
+  const normalizedTopic = String(topic || '').trim()
+  if (!normalizedTopic) return
 
-export function recordTopicAttempt(userId, topic, correct) {
-  if (!userId || !topic) return
-  const stats = getTopicLearningStats(userId)
-  if (!stats[topic]) {
-    stats[topic] = { correct: 0, incorrect: 0 }
+  if (!topicLearning[normalizedTopic]) {
+    topicLearning[normalizedTopic] = { correct: 0, incorrect: 0 }
   }
-  if (correct) {
-    stats[topic].correct++
+
+  if (isCorrect) {
+    topicLearning[normalizedTopic].correct += 1
   } else {
-    stats[topic].incorrect++
+    topicLearning[normalizedTopic].incorrect += 1
   }
-  writeJson(keys.topicLearning(userId), stats)
+
+  apiProgressCache.topicLearning = topicLearning
 }
 
-export function getPendingQuestions(userId) {
+export function isQuestionMastered(questionId) {
+  return getMasteredQuestions().includes(questionId)
+}
+
+export function isScenarioMastered(scenarioId) {
+  return getMasteredScenarios().includes(scenarioId)
+}
+
+export function getTopicLearningStats() {
+  return apiProgressCache?.topicLearning || {}
+}
+
+export function getPendingQuestions() {
   const bank = getDiagnosticBank()
-  const mastered = new Set(getMasteredQuestions(userId))
+  const mastered = new Set(getMasteredQuestions())
   return bank.filter((q) => !mastered.has(q.id))
 }
 
-export function getPendingScenarios(userId) {
+export function getPendingScenarios() {
   const bank = getSimulationBank()
-  const mastered = new Set(getMasteredScenarios(userId))
+  const mastered = new Set(getMasteredScenarios())
   return bank.filter((s) => !mastered.has(s.id))
 }
 
-/**
- * Selecciona hasta N ítems pendientes aleatorios para la sesión actual.
- */
 export function selectPendingForSession(pendingItems, maxCount = ITEMS_PER_SESSION) {
   if (pendingItems.length === 0) return []
   return shuffleArray(pendingItems).slice(0, Math.min(maxCount, pendingItems.length))
 }
 
-export function getDiagnosticProgress(userId) {
-  console.log('[DEBUG] getDiagnosticProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
-  // Primero intentar usar el cache de la API
-  if (apiProgressCache) {
-    const mastered = apiProgressCache.diagnosticMastered || 0
-    const total = apiProgressCache.diagnosticTotal || TOTAL_DIAGNOSTIC_ITEMS
-    console.log('[DEBUG] getDiagnosticProgress - USING apiProgressCache:', { mastered, total, source: 'apiProgressCache' })
+export function getDiagnosticProgress() {
+  if (!apiProgressCache) {
     return {
-      mastered,
-      total,
-      pending: total - mastered,
-      percentage: total > 0 ? Math.round((mastered / total) * 100) : 0,
-      complete: mastered >= total,
+      mastered: 0,
+      total: TOTAL_DIAGNOSTIC_ITEMS,
+      pending: TOTAL_DIAGNOSTIC_ITEMS,
+      percentage: 0,
+      complete: false,
     }
   }
 
-  // Fallback a localStorage
-  const mastered = getMasteredQuestions(userId).length
-  const total = TOTAL_DIAGNOSTIC_ITEMS
-  console.log('[DEBUG] getDiagnosticProgress - USING localStorage:', { mastered, total, source: 'localStorage' })
+  const mastered = apiProgressCache.diagnosticMastered || 0
+  const total = apiProgressCache.diagnosticTotal || TOTAL_DIAGNOSTIC_ITEMS
   return {
     mastered,
     total,
@@ -267,26 +281,19 @@ export function getDiagnosticProgress(userId) {
   }
 }
 
-export function getSimulationProgress(userId) {
-  console.log('[DEBUG] getSimulationProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
-  // Primero intentar usar el cache de la API
-  if (apiProgressCache) {
-    const mastered = apiProgressCache.simulationMastered || 0
-    const total = apiProgressCache.simulationTotal || TOTAL_SIMULATION_ITEMS
-    console.log('[DEBUG] getSimulationProgress - USING apiProgressCache:', { mastered, total, source: 'apiProgressCache' })
+export function getSimulationProgress() {
+  if (!apiProgressCache) {
     return {
-      mastered,
-      total,
-      pending: total - mastered,
-      percentage: total > 0 ? Math.round((mastered / total) * 100) : 0,
-      complete: mastered >= total,
+      mastered: 0,
+      total: TOTAL_SIMULATION_ITEMS,
+      pending: TOTAL_SIMULATION_ITEMS,
+      percentage: 0,
+      complete: false,
     }
   }
 
-  // Fallback a localStorage
-  const mastered = getMasteredScenarios(userId).length
-  const total = TOTAL_SIMULATION_ITEMS
-  console.log('[DEBUG] getSimulationProgress - USING localStorage:', { mastered, total, source: 'localStorage' })
+  const mastered = apiProgressCache.simulationMastered || 0
+  const total = apiProgressCache.simulationTotal || TOTAL_SIMULATION_ITEMS
   return {
     mastered,
     total,
@@ -296,13 +303,10 @@ export function getSimulationProgress(userId) {
   }
 }
 
-/**
- * Análisis acumulativo de fortalezas y debilidades por tema.
- */
-export function getCumulativeTopicAnalysis(userId) {
-  const topicStats = getTopicLearningStats(userId)
-  const masteredQ = new Set(getMasteredQuestions(userId))
-  const masteredS = new Set(getMasteredScenarios(userId))
+export function getCumulativeTopicAnalysis() {
+  const topicStats = getTopicLearningStats()
+  const masteredQ = new Set(getMasteredQuestions())
+  const masteredS = new Set(getMasteredScenarios())
 
   const masteredTopics = new Set()
   getDiagnosticBank().forEach((q) => {
@@ -330,13 +334,13 @@ export function getCumulativeTopicAnalysis(userId) {
     }
   })
 
-  getPendingQuestions(userId).forEach((q) => {
+  getPendingQuestions().forEach((q) => {
     if (topicStats[q.topic]?.incorrect > 0 && !weaknesses.includes(q.topic)) {
       weaknesses.push(q.topic)
     }
   })
 
-  getPendingScenarios(userId).forEach((s) => {
+  getPendingScenarios().forEach((s) => {
     if (topicStats[s.topic]?.incorrect > 0 && !weaknesses.includes(s.topic)) {
       weaknesses.push(s.topic)
     }
@@ -349,44 +353,10 @@ export function getCumulativeTopicAnalysis(userId) {
   }
 }
 
-/**
- * Progreso global del programa (fuente única de verdad).
- */
-export function getLearningProgress(userId) {
-  console.log('[DEBUG] getLearningProgress - apiProgressCache:', apiProgressCache ? 'EXISTS' : 'NULL')
-  if (!userId) {
-    return {
-      diagnostic: {
-        mastered: 0,
-        total: TOTAL_DIAGNOSTIC_ITEMS,
-        pending: TOTAL_DIAGNOSTIC_ITEMS,
-        percentage: 0,
-        complete: false,
-      },
-      simulation: {
-        mastered: 0,
-        total: TOTAL_SIMULATION_ITEMS,
-        pending: TOTAL_SIMULATION_ITEMS,
-        percentage: 0,
-        complete: false,
-      },
-      programComplete: false,
-      strengths: [],
-      weaknesses: [],
-    }
-  }
-
-  const diagnostic = getDiagnosticProgress(userId)
-  const simulation = getSimulationProgress(userId)
-  const { strengths, weaknesses } = getCumulativeTopicAnalysis(userId)
-
-  console.log('[DEBUG] getLearningProgress - RETURNING:', {
-    diagnosticMastered: diagnostic.mastered,
-    diagnosticSource: apiProgressCache ? 'apiProgressCache' : 'localStorage',
-    simulationMastered: simulation.mastered,
-    simulationSource: apiProgressCache ? 'apiProgressCache' : 'localStorage',
-    programComplete: diagnostic.complete && simulation.complete
-  })
+export function getLearningProgress() {
+  const diagnostic = getDiagnosticProgress()
+  const simulation = getSimulationProgress()
+  const { strengths, weaknesses } = getCumulativeTopicAnalysis()
 
   return {
     diagnostic,
@@ -397,33 +367,27 @@ export function getLearningProgress(userId) {
   }
 }
 
-/**
- * Limpia datos corruptos históricos en localStorage.
- * Aplica sanitizeTopicList a todos los resultados guardados.
- */
 export function sanitizeHistoricalData(userId) {
   if (!userId) return false
 
   try {
-    // Limpiar resultados de diagnósticos
     const resultsKey = `results_${userId}`
-    const results = readJson(resultsKey, [])
+    const results = JSON.parse(localStorage.getItem(resultsKey)) || []
     const cleanedResults = results.map((result) => ({
       ...result,
       strengths: sanitizeTopicList(result.strengths || []),
       weaknesses: sanitizeTopicList(result.weaknesses || []),
     }))
-    writeJson(resultsKey, cleanedResults)
+    localStorage.setItem(resultsKey, JSON.stringify(cleanedResults))
 
-    // Limpiar resultados de simulaciones
     const simulationsKey = `simulationsResults_${userId}`
-    const simulations = readJson(simulationsKey, [])
+    const simulations = JSON.parse(localStorage.getItem(simulationsKey)) || []
     const cleanedSimulations = simulations.map((result) => ({
       ...result,
       strengths: sanitizeTopicList(result.strengths || []),
       weaknesses: sanitizeTopicList(result.weaknesses || []),
     }))
-    writeJson(simulationsKey, cleanedSimulations)
+    localStorage.setItem(simulationsKey, JSON.stringify(cleanedSimulations))
 
     return true
   } catch (error) {

@@ -13,6 +13,7 @@ import {
   recordTopicAttempt,
   getDiagnosticProgress,
   getMasteredQuestions,
+  getTopicLearningStats,
   TOTAL_DIAGNOSTIC_ITEMS,
   getCumulativeTopicAnalysis,
   sanitizeTopicList,
@@ -37,13 +38,30 @@ function Diagnostic() {
     }
   }, [])
 
-  const initialProgress = getDiagnosticProgress(userId)
+  const initialProgress = getDiagnosticProgress()
   const [refreshKey, setRefreshKey] = useState(0)
 
   const sessionQuestions = useMemo(
-    () => selectPendingForSession(getPendingQuestions(userId)),
-    [userId, refreshKey]
+    () => selectPendingForSession(getPendingQuestions()),
+    [refreshKey]
   )
+
+  useEffect(() => {
+    if (!userId) return
+    let isMounted = true
+
+    const loadProgress = async () => {
+      await fetchUserProgress()
+      if (!isMounted) return
+      setMasteredCount(getDiagnosticProgress().mastered)
+      setRefreshKey((prev) => prev + 1)
+    }
+
+    loadProgress()
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [shuffledOptions, setShuffledOptions] = useState(() =>
@@ -72,7 +90,7 @@ function Diagnostic() {
     (option) => {
       if (isLocked || !currentQuestion || !userId) return
 
-      const masteredBefore = getMasteredQuestions(userId).length
+      const masteredBefore = getMasteredQuestions().length
       setSelectedAnswer(option)
       setIsLocked(true)
 
@@ -146,7 +164,7 @@ function Diagnostic() {
         }
       })
 
-    const masteredQuestionIds = getMasteredQuestions(userId)
+    const masteredQuestionIds = getMasteredQuestions()
 
     const result = {
       id: generateUniqueId(),
@@ -178,18 +196,18 @@ function Diagnostic() {
           personalizedRecommendations,
           generalRecommendations,
           diagnosticMasteredIds: masteredQuestionIds,
-          masteredQuestionIds,
+          topicLearning: getTopicLearningStats(),
         })
 
-        // Actualizar el cache local
         console.log('[DIAGNOSTIC] Session completed', {
           score: correctCount,
           total: totalSession,
           percentage: Math.round((correctCount / totalSession) * 100),
           fetchUserProgressExecuted: true
         })
-        const progressResponse = await fetchUserProgress()
-        console.log('[DIAGNOSTIC] fetchUserProgress response:', progressResponse)
+
+        await fetchUserProgress()
+        setMasteredCount(getDiagnosticProgress().mastered)
       } catch (error) {
         console.error('Error saving diagnostic to database:', error)
         throw error
@@ -212,7 +230,7 @@ function Diagnostic() {
     setSessionComplete(true)
   }
 
-  const handleContinuePractice = () => {
+  const handleContinuePractice = async () => {
     // Forzar recálculo de preguntas pendientes
     setRefreshKey((prev) => prev + 1)
     
@@ -224,9 +242,8 @@ function Diagnostic() {
     setSessionComplete(false)
     setIsSubmitting(false)
     
-    // Recargar progreso actualizado
-    const updatedProgress = getDiagnosticProgress(userId)
-    setMasteredCount(updatedProgress.mastered)
+    await fetchUserProgress()
+    setMasteredCount(getDiagnosticProgress().mastered)
   }
 
   const handleViewResults = () => navigate('/results')

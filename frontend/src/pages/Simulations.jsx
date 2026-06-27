@@ -32,12 +32,12 @@ import {
   markScenarioMastered,
   recordTopicAttempt,
   getSimulationProgress,
+  getTopicLearningStats,
   TOTAL_SIMULATION_ITEMS,
   getCumulativeTopicAnalysis,
   sanitizeTopicList,
   fetchUserProgress,
   getMasteredScenarios,
-  getCachedProgress,
 } from '../utils/progressHelper'
 import { simulationAPI } from '../services/api'
 import {
@@ -171,19 +171,35 @@ function Simulations() {
 
   useEffect(() => {
     console.log('[NAVIGATION] Enter Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString(), userId })
-    console.log('[SYNC] Simulations page loaded - apiProgressCache status:', getCachedProgress() ? 'EXISTS' : 'NULL')
     return () => {
       console.log('[NAVIGATION] Exit Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
     }
   }, [])
 
-  const initialProgress = getSimulationProgress(userId)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const initialProgress = getSimulationProgress()
+
+  useEffect(() => {
+    if (!userId) return
+    let isMounted = true
+
+    const loadProgress = async () => {
+      await fetchUserProgress()
+      if (!isMounted) return
+      setMasteredCount(getSimulationProgress().mastered)
+      setRefreshKey((prev) => prev + 1)
+    }
+
+    loadProgress()
+    return () => {
+      isMounted = false
+    }
+  }, [userId])
 
   const sessionScenarios = useMemo(
-    () => selectPendingForSession(getPendingScenarios(userId)),
-    [userId]
+    () => selectPendingForSession(getPendingScenarios()),
+    [refreshKey]
   )
-
   const [currentSimulation, setCurrentSimulation] = useState(0)
   const [score, setScore] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
@@ -203,7 +219,7 @@ function Simulations() {
   const handleAnswer = (option) => {
     if (isLocked || !currentSim || !userId) return
 
-    const masteredBefore = getMasteredScenarios(userId).length
+    const masteredBefore = getMasteredScenarios().length
     setSelectedAnswer(option)
     setIsLocked(true)
 
@@ -255,7 +271,7 @@ function Simulations() {
     const sanitizedStrengths = sanitizeTopicList(strengths)
     const sanitizedWeaknesses = sanitizeTopicList(weaknesses)
 
-    const masteredScenarioIds = getMasteredScenarios(userId)
+    const masteredScenarioIds = getMasteredScenarios()
 
     const simulationResult = {
       id: generateUniqueId(),
@@ -283,18 +299,18 @@ function Simulations() {
           strengths: sanitizedStrengths,
           weaknesses: sanitizedWeaknesses,
           simulationMasteredIds: masteredScenarioIds,
-          masteredScenarioIds,
+          topicLearning: getTopicLearningStats(),
         })
 
-        // Actualizar el cache local
         console.log('[SIMULATION] Session completed', {
           score,
           total: totalSession,
           percentage: Math.round((score / totalSession) * 100),
           fetchUserProgressExecuted: true
         })
-        const progressResponse = await fetchUserProgress()
-        console.log('[SIMULATION] fetchUserProgress response:', progressResponse)
+
+        await fetchUserProgress()
+        setMasteredCount(getSimulationProgress().mastered)
       } catch (error) {
         console.error('Error saving simulation to database:', error)
         throw error
@@ -313,8 +329,17 @@ function Simulations() {
   }
 
   const handleBackToDashboard = () => navigate('/student')
-  const handleRestart = () => window.location.reload()
-
+    const handleRestart = async () => {
+      await fetchUserProgress()
+      setMasteredCount(getSimulationProgress().mastered)
+      setCurrentSimulation(0)
+      setSelectedAnswer(null)
+      setIsLocked(false)
+      setSessionAnswers([])
+      setCompleted(false)
+      setIsSubmitting(false)
+      setRefreshKey((prev) => prev + 1)
+    }
   if (initialProgress.complete || masteredCount >= TOTAL_SIMULATION_ITEMS) {
     return (
       <div className="min-h-screen bg-slate-50 pt-20">
