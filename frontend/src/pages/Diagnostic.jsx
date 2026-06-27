@@ -38,9 +38,12 @@ function Diagnostic() {
   }, [userId])
 
   const initialProgress = getDiagnosticProgress()
+  console.log('[DIAGNOSTIC INIT] initialProgress:', initialProgress)
   const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
   const [sessionQuestions, setSessionQuestions] = useState(() => {
-    return selectPendingForSession(getPendingQuestions())
+    const pending = getPendingQuestions()
+    console.log('[DIAGNOSTIC INIT] Initial session questions (before fetch):', pending.map(q => q.id))
+    return selectPendingForSession(pending)
   })
 
   useEffect(() => {
@@ -48,9 +51,22 @@ function Diagnostic() {
     let isMounted = true
 
     const loadProgress = async () => {
+      console.log('[DIAGNOSTIC LOAD] Starting fetchUserProgress()')
       await fetchUserProgress()
       if (!isMounted) return
-      setMasteredCount(getDiagnosticProgress().mastered)
+      
+      const newMasteredCount = getDiagnosticProgress().mastered
+      const newPending = getPendingQuestions()
+      const newSessionQuestions = selectPendingForSession(newPending)
+      
+      console.log('[DIAGNOSTIC LOAD] After fetchUserProgress():')
+      console.log('[DIAGNOSTIC LOAD] - newMasteredCount:', newMasteredCount)
+      console.log('[DIAGNOSTIC LOAD] - getMasteredQuestions():', getMasteredQuestions())
+      console.log('[DIAGNOSTIC LOAD] - newPending question IDs:', newPending.map(q => q.id))
+      console.log('[DIAGNOSTIC LOAD] - newSessionQuestions IDs:', newSessionQuestions.map(q => q.id))
+      
+      setMasteredCount(newMasteredCount)
+      setSessionQuestions(newSessionQuestions)
     }
 
     loadProgress()

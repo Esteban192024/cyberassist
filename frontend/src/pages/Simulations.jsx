@@ -176,9 +176,12 @@ function Simulations() {
   }, [userId])
 
   const initialProgress = getSimulationProgress()
+  console.log('[SIMULATIONS INIT] initialProgress:', initialProgress)
   const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
   const [sessionScenarios, setSessionScenarios] = useState(() => {
-    return selectPendingForSession(getPendingScenarios())
+    const pending = getPendingScenarios()
+    console.log('[SIMULATIONS INIT] Initial session scenarios (before fetch):', pending.map(s => s.id))
+    return selectPendingForSession(pending)
   })
 
   useEffect(() => {
@@ -186,9 +189,22 @@ function Simulations() {
     let isMounted = true
 
     const loadProgress = async () => {
+      console.log('[SIMULATIONS LOAD] Starting fetchUserProgress()')
       await fetchUserProgress()
       if (!isMounted) return
-      setMasteredCount(getSimulationProgress().mastered)
+      
+      const newMasteredCount = getSimulationProgress().mastered
+      const newPending = getPendingScenarios()
+      const newSessionScenarios = selectPendingForSession(newPending)
+      
+      console.log('[SIMULATIONS LOAD] After fetchUserProgress():')
+      console.log('[SIMULATIONS LOAD] - newMasteredCount:', newMasteredCount)
+      console.log('[SIMULATIONS LOAD] - getMasteredScenarios():', getMasteredScenarios())
+      console.log('[SIMULATIONS LOAD] - newPending scenario IDs:', newPending.map(s => s.id))
+      console.log('[SIMULATIONS LOAD] - newSessionScenarios IDs:', newSessionScenarios.map(s => s.id))
+      
+      setMasteredCount(newMasteredCount)
+      setSessionScenarios(newSessionScenarios)
     }
 
     loadProgress()
