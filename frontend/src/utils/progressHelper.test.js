@@ -9,7 +9,6 @@ import {
   getDiagnosticProgress,
   getSimulationProgress,
   getLearningProgress,
-  dedupeTopics,
   sanitizeTopicList,
   TOTAL_DIAGNOSTIC_ITEMS,
   TOTAL_SIMULATION_ITEMS,

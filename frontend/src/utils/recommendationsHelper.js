@@ -76,13 +76,9 @@ export const generatePersonalizedRecommendations = (answers, questions) => {
     const answer = answers[question.id]
     
     // Considerar incorrecto si la respuesta no es "siempre" (o "nunca" para preguntas invertidas)
-    let isIncorrect = false
-    
-    if (question.inverted) {
-      isIncorrect = answer !== 'nunca'
-    } else {
-      isIncorrect = answer !== 'siempre'
-    }
+    const isIncorrect = question.inverted
+      ? answer !== 'nunca'
+      : answer !== 'siempre'
 
     if (isIncorrect && answer !== '') {
       const recommendationData = RECOMMENDATIONS_MAP[question.id]

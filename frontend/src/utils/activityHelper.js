@@ -4,7 +4,7 @@ import { activityAPI } from '../services/api'
 export const registerActivity = async (type, title, details = '') => {
   try {
     await activityAPI.create({ type, title, details })
-  } catch (error) {
+  } catch {
     // Silencioso - no bloquear flujo si falla registro de actividad
   }
 }

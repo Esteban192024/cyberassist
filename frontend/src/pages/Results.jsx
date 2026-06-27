@@ -5,7 +5,6 @@ import {
   Shield,
   CheckCircle,
   AlertTriangle,
-  TrendingUp,
   ArrowRight,
   Calendar,
   Award,
@@ -20,7 +19,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import CertificateGenerator from '../components/CertificateGenerator'
 import ResultsSkeleton from '../components/skeletons/ResultsSkeleton'
 import { loadResultsPageData, invalidateUserCache } from '../store/userStore'
-import { invalidateApiProgressCache } from '../utils/progressHelper'
 import { syncAchievements } from '../utils/achievementsHelper'
 import { unlockCertificate } from '../utils/levelHelper'
 import { getRiskLevelColors } from '../utils/quizHelper'
@@ -82,10 +80,9 @@ function Results() {
     return () => {
       console.log('[NAVIGATION] Exit Results', { pathname: location.pathname, timestamp: new Date().toISOString() })
     }
-  }, [location.pathname])
+  }, [location.pathname, currentUser?.id])
 
   const results = resultsData?.results || []
-  const simulationsResults = resultsData?.simulationsResults || []
   const certificateUnlocked = resultsData?.certificateUnlocked || false
   const canUnlockCertificate = resultsData?.canUnlockCertificate || false
   const latestResult = resultsData?.latestResult || null

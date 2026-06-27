@@ -25,7 +25,7 @@ const Toast = ({ type, message, onClose, duration = 3000, index }) => {
         clearTimeout(timerRef.current)
       }
     }
-  }, [duration])
+  }, [duration, message, type])
 
   const handleClose = () => {
     console.log('[TOAST] Removed (manual)', { type, message })
@@ -98,11 +98,18 @@ const Toast = ({ type, message, onClose, duration = 3000, index }) => {
 const ToastContainer = () => {
   const [toasts, setToasts] = useState([])
   const [queue, setQueue] = useState([])
+  const toastsRef = useRef(toasts)
+  const queueRef = useRef(queue)
 
-  const addToast = (type, message, duration = 3000) => {
+  useEffect(() => {
+    toastsRef.current = toasts
+    queueRef.current = queue
+  }, [toasts, queue])
+
+  const addToast = useCallback((type, message, duration = 3000) => {
     console.log('[TOAST] Requested', { id: 'pending', type, message })
     // Verificar si ya existe un toast idéntico en cola o visible
-    const isDuplicate = [...toasts, ...queue].some(
+    const isDuplicate = [...toastsRef.current, ...queueRef.current].some(
       toast => toast.type === type && toast.message === message
     )
     
@@ -122,10 +129,10 @@ const ToastContainer = () => {
       return prev
     })
     
-    if (toasts.length >= MAX_VISIBLE_TOASTS) {
+    if (toastsRef.current.length >= MAX_VISIBLE_TOASTS) {
       setQueue(prev => [...prev, newToast])
     }
-  }
+  }, [])
 
   const removeToast = useCallback((id) => {
     console.log('[TOAST] Removed', { id })
@@ -133,15 +140,15 @@ const ToastContainer = () => {
       const filtered = prev.filter(toast => toast.id !== id)
       
       // Si hay toasts en cola, agregar el siguiente
-      if (filtered.length < MAX_VISIBLE_TOASTS && queue.length > 0) {
-        const nextToast = queue[0]
+      if (filtered.length < MAX_VISIBLE_TOASTS && queueRef.current.length > 0) {
+        const nextToast = queueRef.current[0]
         setQueue(prev => prev.slice(1))
         return [...filtered, nextToast]
       }
       
       return filtered
     })
-  }, [queue])
+  }, [])
 
   const addToastRef = useRef(addToast)
 

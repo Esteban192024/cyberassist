@@ -1,4 +1,4 @@
-import Skeleton, { SkeletonCard, SkeletonStatCard } from './Skeleton'
+import Skeleton, { SkeletonCard } from './Skeleton'
 
 export function ResultsSkeleton() {
   return (

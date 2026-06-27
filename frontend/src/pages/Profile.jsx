@@ -74,7 +74,7 @@ function Profile() {
     return () => {
       console.log('[NAVIGATION] Exit Profile', { pathname: location.pathname, timestamp: new Date().toISOString() })
     }
-  }, [location.pathname])
+  }, [location.pathname, currentUser?.id])
 
   const diagnosticsCount = stats?.diagnosticsCount ?? 0
   const diagnosticsTotal = stats?.diagnosticsTotal ?? 15
@@ -152,7 +152,7 @@ function Profile() {
     }
 
     try {
-      const response = await userAPI.updateProfile({ nombre: editForm.nombre })
+      await userAPI.updateProfile({ nombre: editForm.nombre })
       
       // Actualizar currentUser en localStorage
       const updatedCurrentUser = { ...currentUser, nombre: editForm.nombre }

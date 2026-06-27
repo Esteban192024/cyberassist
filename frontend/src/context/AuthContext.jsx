@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { fetchUserProgress } from '../utils/progressHelper';
@@ -5,21 +6,26 @@ import { fetchUserProgress } from '../utils/progressHelper';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('currentUser');
+    if (token && storedUser) {
+      return JSON.parse(storedUser);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay un token y usuario al cargar
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('currentUser');
-    
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-      // Cargar progreso desde backend para sincronización entre dispositivos
-      fetchUserProgress();
+    const loadSession = async () => {
+      if (user) {
+        await fetchUserProgress();
+      }
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+
+    loadSession()
+  }, [user]);
 
   const login = async (email, password) => {
     try {

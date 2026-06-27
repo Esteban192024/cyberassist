@@ -8,7 +8,6 @@ import {
   TOTAL_DIAGNOSTIC_ITEMS,
   TOTAL_SIMULATION_ITEMS,
   getLearningProgress,
-  invalidateApiProgressCache,
 } from './progressHelper'
 import { achievementAPI } from '../services/api'
 

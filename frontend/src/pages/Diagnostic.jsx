@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Shield, CheckCircle, XCircle, ArrowRight, Award, TrendingUp } from 'lucide-react'
@@ -23,7 +23,6 @@ import { diagnosticAPI } from '../services/api'
 import {
   shuffleArray,
   calculateRiskLevel,
-  generateUniqueId,
 } from '../utils/quizHelper'
 
 function Diagnostic() {
@@ -36,15 +35,12 @@ function Diagnostic() {
     return () => {
       console.log('[NAVIGATION] Exit Diagnostic', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
     }
-  }, [])
+  }, [userId])
 
   const initialProgress = getDiagnosticProgress()
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
 
-  const sessionQuestions = useMemo(
-    () => selectPendingForSession(getPendingQuestions()),
-    [refreshKey]
-  )
+  const sessionQuestions = selectPendingForSession(getPendingQuestions())
 
   useEffect(() => {
     if (!userId) return
@@ -54,7 +50,6 @@ function Diagnostic() {
       await fetchUserProgress()
       if (!isMounted) return
       setMasteredCount(getDiagnosticProgress().mastered)
-      setRefreshKey((prev) => prev + 1)
     }
 
     loadProgress()
@@ -64,66 +59,56 @@ function Diagnostic() {
   }, [userId])
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [shuffledOptions, setShuffledOptions] = useState(() =>
-    sessionQuestions.length > 0 ? shuffleArray(sessionQuestions[0].options) : []
-  )
   const [selectedAnswer, setSelectedAnswer] = useState(null)
   const [isLocked, setIsLocked] = useState(false)
   const [sessionAnswers, setSessionAnswers] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
   const [sessionComplete, setSessionComplete] = useState(false)
 
   const currentQuestion = sessionQuestions[currentIndex]
-
-  // Actualizar shuffledOptions cuando cambia la pregunta actual
-  useEffect(() => {
-    if (currentQuestion?.options) {
-      setShuffledOptions(shuffleArray(currentQuestion.options))
-    }
-  }, [currentQuestion])
+  const shuffledOptions = useMemo(
+    () => (currentQuestion?.options ? shuffleArray(currentQuestion.options) : []),
+    [currentQuestion]
+  )
   const totalSession = sessionQuestions.length
   const cumulativeProgress = (masteredCount / TOTAL_DIAGNOSTIC_ITEMS) * 100
   const allDiagnosticsComplete = masteredCount >= TOTAL_DIAGNOSTIC_ITEMS
 
-  const handleSelectAnswer = useCallback(
-    (option) => {
-      if (isLocked || !currentQuestion || !userId) return
+  const handleSelectAnswer = (option) => {
+    if (isLocked || !currentQuestion || !userId) return
 
-      const masteredBefore = getMasteredQuestions().length
-      setSelectedAnswer(option)
-      setIsLocked(true)
+    const masteredBefore = getMasteredQuestions().length
+    setSelectedAnswer(option)
+    setIsLocked(true)
 
-      const isCorrect = option === currentQuestion.correctAnswer
-      recordTopicAttempt(userId, currentQuestion.topic, isCorrect)
+    const isCorrect = option === currentQuestion.correctAnswer
+    recordTopicAttempt(userId, currentQuestion.topic, isCorrect)
 
-      console.log('[DIAGNOSTIC] Question answered', {
-        questionId: currentQuestion.id,
-        correct: isCorrect,
-        masteredBefore,
-        masteredAfter: isCorrect ? masteredBefore + 1 : masteredBefore
-      })
+    console.log('[DIAGNOSTIC] Question answered', {
+      questionId: currentQuestion.id,
+      correct: isCorrect,
+      masteredBefore,
+      masteredAfter: isCorrect ? masteredBefore + 1 : masteredBefore,
+    })
 
-      if (isCorrect) {
-        const isNewMaster = markQuestionMastered(userId, currentQuestion.id)
-        if (isNewMaster) {
-          setMasteredCount((prev) => prev + 1)
-          addXP('question', `question_${currentQuestion.id}`)
-        }
+    if (isCorrect) {
+      const isNewMaster = markQuestionMastered(userId, currentQuestion.id)
+      if (isNewMaster) {
+        setMasteredCount((prev) => prev + 1)
+        addXP('question', `question_${currentQuestion.id}`)
       }
+    }
 
-      setSessionAnswers((prev) => [
-        ...prev,
-        {
-          questionId: currentQuestion.id,
-          topic: currentQuestion.topic,
-          correct: isCorrect,
-          selectedAnswer: option,
-        },
-      ])
-    },
-    [isLocked, currentQuestion, userId]
-  )
+    setSessionAnswers((prev) => [
+      ...prev,
+      {
+        questionId: currentQuestion.id,
+        topic: currentQuestion.topic,
+        correct: isCorrect,
+        selectedAnswer: option,
+      },
+    ])
+  }
 
   const handleNext = () => {
     if (!isLocked) return
@@ -131,7 +116,6 @@ function Diagnostic() {
     if (currentIndex < totalSession - 1) {
       const nextIndex = currentIndex + 1
       setCurrentIndex(nextIndex)
-      setShuffledOptions(shuffleArray(sessionQuestions[nextIndex].options))
       setSelectedAnswer(null)
       setIsLocked(false)
     } else {
@@ -145,7 +129,7 @@ function Diagnostic() {
 
     const correctCount = sessionAnswers.filter((a) => a.correct).length
     const riskLevel = calculateRiskLevel(correctCount, totalSession)
-    const { strengths, weaknesses } = getCumulativeTopicAnalysis(userId)
+    const { strengths, weaknesses } = getCumulativeTopicAnalysis()
     const generalRecommendations = getGeneralRecommendations(riskLevel)
 
     const sanitizedStrengths = sanitizeTopicList(strengths)
@@ -165,22 +149,6 @@ function Diagnostic() {
       })
 
     const masteredQuestionIds = getMasteredQuestions()
-
-    const result = {
-      id: generateUniqueId(),
-      score: correctCount,
-      total: totalSession,
-      masteredTotal: masteredCount,
-      masteredGoal: TOTAL_DIAGNOSTIC_ITEMS,
-      level: riskLevel,
-      riskLevel,
-      date: new Date().toISOString().split('T')[0],
-      personalizedRecommendations,
-      generalRecommendations,
-      strengths: sanitizedStrengths,
-      weaknesses: sanitizedWeaknesses,
-      userId,
-    }
 
     // Guardar en la base de datos
     if (userId) {
@@ -231,9 +199,6 @@ function Diagnostic() {
   }
 
   const handleContinuePractice = async () => {
-    // Forzar recálculo de preguntas pendientes
-    setRefreshKey((prev) => prev + 1)
-    
     // Reiniciar el estado local para cargar nuevas preguntas pendientes
     setCurrentIndex(0)
     setSelectedAnswer(null)

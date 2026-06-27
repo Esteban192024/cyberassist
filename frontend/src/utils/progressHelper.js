@@ -65,7 +65,7 @@ export const invalidateUserProgressCache = () => {
 export const getCachedProgress = () => apiProgressCache
 
 export async function fetchUserProgress(profileData = null) {
-  let loadedProgress = null
+  let loadedProgress
 
   if (profileData?.userProgress) {
     loadedProgress = profileData.userProgress

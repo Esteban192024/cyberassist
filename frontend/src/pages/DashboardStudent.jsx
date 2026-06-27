@@ -63,7 +63,7 @@ function DashboardStudent() {
     return () => {
       console.log('[NAVIGATION] Exit Dashboard', { pathname: location.pathname, timestamp: new Date().toISOString() })
     }
-  }, [location.pathname])
+  }, [location.pathname, currentUser?.id])
 
   const results = dashboardStats?.results || []
 

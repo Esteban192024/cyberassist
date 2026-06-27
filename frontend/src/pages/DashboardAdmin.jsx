@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { 
   Users, 
   BarChart3, 
@@ -11,8 +10,6 @@ import {
 } from 'lucide-react'
 
 function DashboardAdmin() {
-  const navigate = useNavigate()
-  
   const users = JSON.parse(localStorage.getItem('users')) || []
   const results = JSON.parse(localStorage.getItem('results')) || []
   
@@ -32,10 +29,6 @@ function DashboardAdmin() {
     console.log('Ver reportes')
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser')
-    navigate('/')
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pt-20">

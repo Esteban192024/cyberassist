@@ -43,7 +43,6 @@ import { simulationAPI } from '../services/api'
 import {
   shuffleArray,
   calculateRiskLevel,
-  generateUniqueId,
   getCorrectScenarioOption,
   getRiskLevelColors,
 } from '../utils/quizHelper'
@@ -174,10 +173,10 @@ function Simulations() {
     return () => {
       console.log('[NAVIGATION] Exit Simulations', { pathname: window.location.pathname, timestamp: new Date().toISOString() })
     }
-  }, [])
+  }, [userId])
 
-  const [refreshKey, setRefreshKey] = useState(0)
   const initialProgress = getSimulationProgress()
+  const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
 
   useEffect(() => {
     if (!userId) return
@@ -187,7 +186,6 @@ function Simulations() {
       await fetchUserProgress()
       if (!isMounted) return
       setMasteredCount(getSimulationProgress().mastered)
-      setRefreshKey((prev) => prev + 1)
     }
 
     loadProgress()
@@ -196,23 +194,20 @@ function Simulations() {
     }
   }, [userId])
 
-  const sessionScenarios = useMemo(
-    () => selectPendingForSession(getPendingScenarios()),
-    [refreshKey]
-  )
+  const sessionScenarios = selectPendingForSession(getPendingScenarios())
   const [currentSimulation, setCurrentSimulation] = useState(0)
   const [score, setScore] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
   const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [shuffledOptions, setShuffledOptions] = useState(() =>
-    sessionScenarios.length > 0 ? shuffleArray(sessionScenarios[0].options) : []
-  )
-  const [sessionAnswers, setSessionAnswers] = useState([])
   const [completed, setCompleted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [masteredCount, setMasteredCount] = useState(initialProgress.mastered)
+  
 
   const currentSim = sessionScenarios[currentSimulation]
+  const shuffledOptions = useMemo(
+    () => (currentSim?.options ? shuffleArray(currentSim.options) : []),
+    [currentSim]
+  )
   const totalSession = sessionScenarios.length
   const cumulativeProgress = (masteredCount / TOTAL_SIMULATION_ITEMS) * 100
 
@@ -242,10 +237,7 @@ function Simulations() {
       }
     }
 
-    setSessionAnswers((prev) => [
-      ...prev,
-      { scenarioId: currentSim.id, topic: currentSim.topic, correct: isCorrect },
-    ])
+    
   }
 
   const handleNext = () => {
@@ -254,7 +246,6 @@ function Simulations() {
     if (currentSimulation < totalSession - 1) {
       const nextIndex = currentSimulation + 1
       setCurrentSimulation(nextIndex)
-      setShuffledOptions(shuffleArray(sessionScenarios[nextIndex].options))
       setSelectedAnswer(null)
       setIsLocked(false)
     } else {
@@ -266,26 +257,12 @@ function Simulations() {
     setIsSubmitting(true)
 
     const riskLevel = calculateRiskLevel(score, totalSession)
-    const { strengths, weaknesses } = getCumulativeTopicAnalysis(userId)
+    const { strengths, weaknesses } = getCumulativeTopicAnalysis()
 
     const sanitizedStrengths = sanitizeTopicList(strengths)
     const sanitizedWeaknesses = sanitizeTopicList(weaknesses)
 
     const masteredScenarioIds = getMasteredScenarios()
-
-    const simulationResult = {
-      id: generateUniqueId(),
-      score,
-      total: totalSession,
-      masteredTotal: masteredCount,
-      masteredGoal: TOTAL_SIMULATION_ITEMS,
-      level: riskLevel,
-      riskLevel,
-      strengths: sanitizedStrengths,
-      weaknesses: sanitizedWeaknesses,
-      date: new Date().toISOString().split('T')[0],
-      userId,
-    }
 
     // Guardar en la base de datos
     if (userId) {
@@ -329,17 +306,15 @@ function Simulations() {
   }
 
   const handleBackToDashboard = () => navigate('/student')
-    const handleRestart = async () => {
-      await fetchUserProgress()
-      setMasteredCount(getSimulationProgress().mastered)
-      setCurrentSimulation(0)
-      setSelectedAnswer(null)
-      setIsLocked(false)
-      setSessionAnswers([])
-      setCompleted(false)
-      setIsSubmitting(false)
-      setRefreshKey((prev) => prev + 1)
-    }
+  const handleRestart = async () => {
+    await fetchUserProgress()
+    setMasteredCount(getSimulationProgress().mastered)
+    setCurrentSimulation(0)
+    setSelectedAnswer(null)
+    setIsLocked(false)
+    setCompleted(false)
+    setIsSubmitting(false)
+  }
   if (initialProgress.complete || masteredCount >= TOTAL_SIMULATION_ITEMS) {
     return (
       <div className="min-h-screen bg-slate-50 pt-20">

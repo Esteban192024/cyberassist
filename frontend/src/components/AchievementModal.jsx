@@ -1,27 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Trophy } from 'lucide-react'
 
+const CONFETTI_PARTICLES = Array.from({ length: 20 }, (_, i) => {
+  const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+  return {
+    id: i,
+    x: `${Math.random() * 100}%`,
+    y: `${Math.random() * 100}%`,
+    backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+    delay: 0.3 + i * 0.05,
+  }
+})
+
 function AchievementModal({ achievement, onClose, isOpen }) {
-  const [isVisible, setIsVisible] = useState(false)
+  const handleClose = useCallback(() => {
+    onClose()
+  }, [onClose])
 
   useEffect(() => {
     if (isOpen && achievement) {
-      setIsVisible(true)
-      // Auto close after 5 seconds
       const timer = setTimeout(() => {
         handleClose()
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [isOpen, achievement])
-
-  const handleClose = () => {
-    setIsVisible(false)
-    setTimeout(() => {
-      onClose()
-    }, 300)
-  }
+  }, [isOpen, achievement, handleClose])
 
   if (!achievement) return null
 
@@ -57,7 +61,7 @@ function AchievementModal({ achievement, onClose, isOpen }) {
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isOpen && achievement && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -156,9 +160,9 @@ function AchievementModal({ achievement, onClose, isOpen }) {
 
               {/* Confetti Effect */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-                {[...Array(20)].map((_, i) => (
+                {CONFETTI_PARTICLES.map((particle) => (
                   <motion.div
-                    key={i}
+                    key={particle.id}
                     initial={{ 
                       x: '50%', 
                       y: '50%', 
@@ -166,19 +170,19 @@ function AchievementModal({ achievement, onClose, isOpen }) {
                       opacity: 1
                     }}
                     animate={{
-                      x: `${Math.random() * 100}%`,
-                      y: `${Math.random() * 100}%`,
+                      x: particle.x,
+                      y: particle.y,
                       scale: 1,
                       opacity: 0
                     }}
                     transition={{
-                      delay: 0.3 + i * 0.05,
+                      delay: particle.delay,
                       duration: 1.5,
                       ease: 'easeOut'
                     }}
                     className="absolute w-2 h-2"
                     style={{
-                      backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'][Math.floor(Math.random() * 5)]
+                      backgroundColor: particle.backgroundColor
                     }}
                   />
                 ))}

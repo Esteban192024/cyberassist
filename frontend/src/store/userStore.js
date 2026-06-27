@@ -13,7 +13,7 @@ import {
   getUnlockedAchievements,
   getAllAchievements,
 } from '../utils/achievementsHelper'
-import { getLearningProgress, sanitizeTopicList, fetchDiagnostics, fetchSimulations, fetchUserProgress, getCachedProgress } from '../utils/progressHelper'
+import { getLearningProgress, sanitizeTopicList, getCachedProgress } from '../utils/progressHelper'
 import { getUserActivities } from '../utils/activityHelper'
 import { diagnosticAPI, simulationAPI, certificateAPI } from '../services/api'
 
@@ -25,15 +25,6 @@ const CACHE_DURATION = 5000 // 5 segundos
 export const invalidateUserCache = () => {
   userDataCache = null
   cacheTimestamp = 0
-}
-
-function readStoredArray(key) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key))
-    return Array.isArray(value) ? value : []
-  } catch {
-    return []
-  }
 }
 
 function safePercentage(part, total) {
@@ -64,8 +55,8 @@ export const getUserData = async () => {
   }
 
   // Obtener datos de la API
-  let results = []
-  let simulationsResults = []
+  let results
+  let simulationsResults
 
   try {
     const [diagnosticsData, simulationsData] = await Promise.all([
@@ -82,7 +73,7 @@ export const getUserData = async () => {
   const levelData = getUserLevelData()
   const unlockedAchievements = await getUnlockedAchievements()
   
-  let certificateUnlocked = false
+  let certificateUnlocked
   try {
     const certificatesResponse = await certificateAPI.getUserCertificates()
     certificateUnlocked = certificatesResponse.data && certificatesResponse.data.length > 0
@@ -327,7 +318,11 @@ export const buildCombinedHistory = (userData) => {
       if (dateDiff !== 0) return dateDiff
       return (b._order ?? 0) - (a._order ?? 0)
     })
-    .map(({ _order, ...item }) => item)
+    .map((item) => {
+      const { _order, ...rest } = item
+      void _order
+      return rest
+    })
 }
 
 export const getCombinedHistory = async () => {
@@ -403,7 +398,7 @@ export const useUserData = () => {
   const [userData, setUserData] = useState(null)
 
   useEffect(() => {
-    setUserData(getUserData())
+    getUserData().then(setUserData)
   }, [])
 
   return userData
