@@ -129,7 +129,7 @@ export const getUserData = async () => {
     (latestResult ? calculateRiskLevel(latestResult.score, latestResult.total || 5) : 'Sin datos')
 
   const securityLevel = latestRiskLevel
-  const badgesEarned = Math.min(unlockedAchievements.length, 5)
+  const badgesEarned = unlockedAchievements.length
   const bestScore = results.length > 0 ? Math.max(...results.map((r) => r.score)) : 0
   const lastScore = latestResult?.score || 0
 
