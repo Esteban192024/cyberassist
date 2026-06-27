@@ -48,18 +48,22 @@ export const createSimulation = async (req, res) => {
     if (userProgress) {
       console.log('[USER PROGRESS UPDATE] Actualizando UserProgress para userId:', userId);
 
+      const newSimulationMasteredIds = simulationMasteredIdsToSave
+        ? Array.from(new Set([...userProgress.simulationMasteredIds, ...simulationMasteredIdsToSave]))
+        : userProgress.simulationMasteredIds;
+      
+      const newSimulationMasteredCount = newSimulationMasteredIds.length;
+
       const updatedUserProgress = await prisma.userProgress.update({
         where: { userId },
         data: {
-          simulationMastered: Math.max(userProgress.simulationMastered, masteredTotal),
+          simulationMastered: newSimulationMasteredCount,
           simulationTotal: masteredGoal,
-          simulationMasteredIds: simulationMasteredIdsToSave
-            ? Array.from(new Set([...userProgress.simulationMasteredIds, ...simulationMasteredIdsToSave]))
-            : userProgress.simulationMasteredIds,
+          simulationMasteredIds: newSimulationMasteredIds,
           topicLearning: topicLearning || userProgress.topicLearning,
           programComplete:
             userProgress.diagnosticMastered >= userProgress.diagnosticTotal &&
-            Math.max(userProgress.simulationMastered, masteredTotal) >= masteredGoal,
+            newSimulationMasteredCount >= masteredGoal,
         },
       });
 

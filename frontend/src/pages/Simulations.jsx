@@ -269,10 +269,11 @@ function Simulations() {
     // Guardar en la base de datos
     if (userId) {
       try {
+        const actualMasteredCount = masteredScenarioIds.length;
         await simulationAPI.create({
           score,
           total: totalSession,
-          masteredTotal: masteredCount,
+          masteredTotal: actualMasteredCount,
           masteredGoal: TOTAL_SIMULATION_ITEMS,
           riskLevel,
           strengths: sanitizedStrengths,

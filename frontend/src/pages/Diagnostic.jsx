@@ -172,10 +172,11 @@ function Diagnostic() {
     // Guardar en la base de datos
     if (userId) {
       try {
+        const actualMasteredCount = masteredQuestionIds.length; // <-- FIX: use actual length of mastered IDs array instead of state
         const apiPayload = {
           score: correctCount,
           total: totalSession,
-          masteredTotal: masteredCount,
+          masteredTotal: actualMasteredCount,
           masteredGoal: TOTAL_DIAGNOSTIC_ITEMS,
           riskLevel,
           strengths: sanitizedStrengths,

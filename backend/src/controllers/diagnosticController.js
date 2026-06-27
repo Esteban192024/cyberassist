@@ -70,7 +70,7 @@ export const createDiagnostic = async (req, res) => {
         ? Array.from(new Set([...userProgress.diagnosticMasteredIds, ...diagnosticMasteredIdsToSave]))
         : userProgress.diagnosticMasteredIds;
 
-      const newDiagnosticMasteredCount = Math.max(userProgress.diagnosticMastered, masteredTotal);
+      const newDiagnosticMasteredCount = newDiagnosticMasteredIds.length; // <-- FIX HERE: use array length instead of masteredTotal!
 
       console.log('[USER PROGRESS UPDATE] 6. Datos a guardar en UserProgress:', {
         newDiagnosticMasteredCount,
