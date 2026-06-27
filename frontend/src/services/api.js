@@ -68,6 +68,7 @@ export const achievementAPI = {
   getAll: () => api.get('/achievements'),
   unlock: (data) => api.post('/achievements/unlock', data),
   getUserAchievements: () => api.get('/achievements/user'),
+  resetUserAchievements: () => api.delete('/achievements/user'),
 };
 
 export const activityAPI = {

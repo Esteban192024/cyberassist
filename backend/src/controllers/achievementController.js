@@ -197,6 +197,76 @@ export const unlockAchievement = async (req, res) => {
       return res.status(400).json({ error: 'Achievement already unlocked' });
     }
 
+    // Get user's actual progress and data from PostgreSQL to validate
+    const [user, userProgress] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      prisma.userProgress.findUnique({ where: { userId } })
+    ]);
+
+    if (!user || !userProgress) {
+      return res.status(404).json({ error: 'User or user progress not found' });
+    }
+
+    // Validate achievement criteria against actual database data
+    let isEligible = false;
+    const TOTAL_DIAGNOSTIC_ITEMS = 15;
+    const TOTAL_SIMULATION_ITEMS = 15;
+    const LEVELS = {
+      2: { xpRequired: 300 },
+      3: { xpRequired: 700 },
+      4: { xpRequired: 1200 },
+      5: { xpRequired: 2000 }
+    };
+
+    switch (code) {
+      case 'first_diagnostic':
+        isEligible = userProgress.diagnosticMasteredIds.length >= 1;
+        break;
+      case 'diagnostic_master':
+        isEligible = userProgress.diagnosticMasteredIds.length >= TOTAL_DIAGNOSTIC_ITEMS;
+        break;
+      case 'first_simulation':
+        isEligible = userProgress.simulationMasteredIds.length >= 1;
+        break;
+      case 'simulation_master':
+        isEligible = userProgress.simulationMasteredIds.length >= TOTAL_SIMULATION_ITEMS;
+        break;
+      case 'level_2':
+        isEligible = user.level >= 2 || user.xp >= LEVELS[2].xpRequired;
+        break;
+      case 'level_3':
+        isEligible = user.level >= 3 || user.xp >= LEVELS[3].xpRequired;
+        break;
+      case 'level_4':
+        isEligible = user.level >= 4 || user.xp >= LEVELS[4].xpRequired;
+        break;
+      case 'level_5':
+        isEligible = user.level >= 5 || user.xp >= LEVELS[5].xpRequired;
+        break;
+      case 'security_expert':
+        isEligible = userProgress.diagnosticMasteredIds.length >= TOTAL_DIAGNOSTIC_ITEMS;
+        break;
+      case 'program_complete':
+        isEligible = userProgress.diagnosticMasteredIds.length >= TOTAL_DIAGNOSTIC_ITEMS &&
+                     userProgress.simulationMasteredIds.length >= TOTAL_SIMULATION_ITEMS;
+        break;
+      case 'perfect_score':
+      case 'perfect_simulation':
+      case 'phishing_expert':
+        // These require session data, we'll trust frontend for now (or add validation later)
+        isEligible = true;
+        break;
+      default:
+        isEligible = false;
+    }
+
+    if (!isEligible) {
+      console.log(`[ACHIEVEMENT VALIDATION] User ${userId} not eligible for ${code}`);
+      return res.status(403).json({ error: 'User does not meet the criteria for this achievement' });
+    }
+
+    console.log(`[ACHIEVEMENT VALIDATION] User ${userId} eligible for ${code}, unlocking...`);
+
     const userAchievement = await prisma.userAchievement.create({
       data: {
         userId,
@@ -235,5 +305,25 @@ export const getUserAchievements = async (req, res) => {
   } catch (error) {
     console.error('Get user achievements error:', error);
     res.status(500).json({ error: 'Failed to fetch user achievements' });
+  }
+};
+
+export const resetUserAchievements = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const deleted = await prisma.userAchievement.deleteMany({
+      where: { userId }
+    });
+
+    console.log(`[ACHIEVEMENT RESET] Deleted ${deleted.count} user achievements for userId: ${userId}`);
+
+    res.json({
+      message: 'User achievements reset successfully',
+      deletedCount: deleted.count
+    });
+  } catch (error) {
+    console.error('Reset user achievements error:', error);
+    res.status(500).json({ error: 'Failed to reset user achievements' });
   }
 };

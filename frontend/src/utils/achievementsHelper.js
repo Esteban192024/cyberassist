@@ -1,15 +1,18 @@
 // Sistema de logros y achievements - Migrado a Neon/Prisma
-import { registerActivity } from './activityHelper'
-import { addXP, getUserLevelData } from './levelHelper'
-import { LEVELS } from './levelHelper'
+import { registerActivity } from './activityHelper';
+import { addXP, getUserLevelData } from './levelHelper';
+import { LEVELS } from './levelHelper';
 import {
   getMasteredQuestions,
   getMasteredScenarios,
   TOTAL_DIAGNOSTIC_ITEMS,
   TOTAL_SIMULATION_ITEMS,
   getLearningProgress,
-} from './progressHelper'
-import { achievementAPI } from '../services/api'
+  fetchUserProgress,
+  invalidateUserProgressCache,
+} from './progressHelper';
+import { achievementAPI } from '../services/api';
+import { invalidateUserCache } from '../store/userStore';
 
 // Cache local para logros (se llena desde API)
 let allAchievementsCache = null
@@ -35,8 +38,11 @@ function hasPerfectSimulationSession(simulationsResults) {
 }
 
 async function evaluateAchievements(context = {}, { silent = false } = {}) {
-  console.log('[ACHIEVEMENTS] Evaluation started', { context, silent })
-  console.log('[DEBUG] checkAchievements() called with context:', context)
+  console.log('[ACHIEVEMENTS] Evaluation started', { context, silent });
+  console.log('[DEBUG] checkAchievements() called with context:', context);
+
+  // First fetch latest user progress from PostgreSQL
+  await fetchUserProgress();
 
   // invalidateApiProgressCache() - ELIMINADO: Usar API como fuente de verdad, no localStorage
 
@@ -172,6 +178,21 @@ async function evaluateAchievements(context = {}, { silent = false } = {}) {
 
   return newlyUnlocked
 }
+
+export const resetAchievements = async () => {
+  console.log('[ACHIEVEMENTS] Resetting user achievements');
+  try {
+    await achievementAPI.resetUserAchievements();
+    userAchievementsCache = null;
+    invalidateUserProgressCache();
+    invalidateUserCache();
+    console.log('[ACHIEVEMENTS] User achievements reset successfully');
+    return true;
+  } catch (error) {
+    console.error('Error resetting user achievements:', error);
+    return false;
+  }
+};
 
 export const syncAchievements = () => evaluateAchievements({ type: 'sync' }, { silent: true })
 

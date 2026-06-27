@@ -3,7 +3,8 @@ import {
   initializeAchievements, 
   getAchievements, 
   unlockAchievement, 
-  getUserAchievements 
+  getUserAchievements,
+  resetUserAchievements
 } from '../controllers/achievementController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -20,5 +21,8 @@ router.post('/unlock', authenticateToken, unlockAchievement);
 
 // Get user achievements (authenticated)
 router.get('/user', authenticateToken, getUserAchievements);
+
+// Reset user achievements (authenticated)
+router.delete('/user', authenticateToken, resetUserAchievements);
 
 export default router;
